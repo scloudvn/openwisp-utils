@@ -151,7 +151,9 @@ This is a template loader which looks for templates in the ``templates``
 directory of the apps listed in ``settings.EXTENDED_APPS``.
 
 Add ``openwisp_utils.loaders.DependencyLoader`` to
-template ``loaders`` in ``settings.py`` as shown below.
+template ``loaders``
+before ``django.template.loaders.app_directories.Loader``
+in ``settings.py`` as shown below.
 
 .. code-block:: python
 
@@ -162,7 +164,8 @@ template ``loaders`` in ``settings.py`` as shown below.
             'OPTIONS': {
                 'loaders': [
                     # ... other loaders ...
-                    'openwisp_utils.loaders.DependencyLoader',    # <----- add this
+                    'openwisp_utils.loaders.DependencyLoader', # <----- add this
+                    'django.template.loaders.app_directories.Loader' # must come before this
                 ],
                 'context_processors': [
                     # ... omitted ...
