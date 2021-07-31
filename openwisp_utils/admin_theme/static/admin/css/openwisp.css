@@ -658,6 +658,10 @@ input[type='button']:hover,
   float: none;
   margin-bottom: 26px;
 }
+.no-auth .title-wrapper h1{
+  float: none;
+  margin: 0;
+}
 #changelist .results + .paginator{
   box-sizing: border-box;
   font-size: 14px;

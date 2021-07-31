@@ -125,7 +125,6 @@ function setMenuToggleText(){
 
 function setMenu() {
   setMenuState();
-  setMenuToggleText();
   setTimeout(function () {
     // Transition fix: Add transition to menu and main content
     // after some time.
@@ -161,6 +160,7 @@ function initToggleMenuHandlers() {
   menuBackdrop.addEventListener('click', function (e) {
     e.stopPropagation();
     owContainer.classList.toggle('toggle-menu');
+    setMenuToggleText();
   });
 }
 
