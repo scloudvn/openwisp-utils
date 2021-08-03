@@ -74,10 +74,12 @@
         <!-- Content -->
         <div id="content" class="{% block coltype %}colM{% endblock %}">
           <div class="title-wrapper">
+            <div>
             {% block pretitle %}{% endblock %}
             {% block content_title %}{% if title %}<h1>{{ title }}</h1>{% endif %}{% endblock %}
             {% block content_subtitle %}{% if subtitle %}<h2>{{ subtitle }}</h2>{% endif %}{% endblock %}
             {% block object-tools %}{% endblock %}
+            </div>
           </div>
           {% block content %}
             {{ content }}

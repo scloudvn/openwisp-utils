@@ -640,23 +640,25 @@ input[type='button']:hover,
 #content-main .object-tools{
   display: none;
 }
+.title-wrapper{
+  padding-bottom: 50px;
+}
+.login .title-wrapper{
+  padding-bottom: 0px;
+}
 .title-wrapper h1,
 .title-wrapper h2{
   float: left;
-  margin-top: 26px;
+  margin-top: 20px!important;
   margin-bottom: 0px;
 }
 .title-wrapper .object-tools{
   float: right;
-  margin: 20px 0px!important;
   height: auto;
+  margin: 16px 0px!important;
 }
 .title-wrapper .object-tools li{
   height: auto;
-}
-.dashboard .title-wrapper h1{
-  float: none;
-  margin-bottom: 26px;
 }
 #changelist .results + .paginator{
   box-sizing: border-box;
