@@ -1449,3 +1449,21 @@ body::-webkit-scrollbar {
   mask-image: url(../../ui/openwisp/images/mass-upgrade.svg);
   -webkit-mask-image: url(../../ui/openwisp/images/mass-upgrade.svg);
 }
+
+/* NETWORK TOPOLOGY */
+.ow-network-topology {
+  mask-image: url(../../ui/openwisp/images/network-topology.svg);
+  -webkit-mask-image: url(../../ui/openwisp/images/network-topology.svg);
+}
+.ow-link{
+  mask-image: url(../../ui/openwisp/images/link.svg);
+  -webkit-mask-image: url(../../ui/openwisp/images/link.svg);
+}
+.ow-topology{
+  mask-image: url(../../ui/openwisp/images/topology.svg);
+  -webkit-mask-image: url(../../ui/openwisp/images/topology.svg);
+}
+.ow-node{
+  mask-image: url(../../ui/openwisp/images/node.svg);
+  -webkit-mask-image: url(../../ui/openwisp/images/node.svg);
+}
