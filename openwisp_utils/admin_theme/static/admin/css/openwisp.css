@@ -640,22 +640,15 @@ input[type='button']:hover,
 #content-main .object-tools{
   display: none;
 }
-.title-wrapper{
-  padding-bottom: 50px;
-}
-.login .title-wrapper{
-  padding-bottom: 0px;
-}
 .title-wrapper h1,
 .title-wrapper h2{
-  float: left;
-  margin-top: 20px!important;
-  margin-bottom: 0px;
+  display: inline-block;
+  margin: 0px;
+  margin-bottom: 20px;
 }
 .title-wrapper .object-tools{
-  float: right;
-  height: auto;
-  margin: 16px 0px!important;
+  margin-top: -4px;
+  margin-bottom: 20px;
 }
 .title-wrapper .object-tools li{
   height: auto;
@@ -685,7 +678,8 @@ div#toolbar #searchbar{
 }
 #main .option-container {
   position: absolute;
-  margin-top: 39px;
+  margin-top: 0px;
+  top: 39px;
   display: flex;
   flex-direction: column;
   text-align: center;
@@ -750,11 +744,14 @@ div#toolbar #searchbar{
     display: block;
     text-align: center;
   }
+  .title-wrapper h1,
+  .title-wrapper h2{
+    margin-bottom: 15px;
+    display: block;
+  }
   .title-wrapper .object-tools {
-    height: auto;
-    flex-direction: column;
-    align-items: self-start;
-    width: 100%;
+    display: inline-block;
+    margin-bottom: 15px!important;
   }
   .title-wrapper .object-tools li{
     margin-left: 0px;

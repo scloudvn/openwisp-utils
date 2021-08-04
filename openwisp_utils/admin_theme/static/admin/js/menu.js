@@ -14,7 +14,16 @@ var MenuTransitionTime = '0.1s';
   initAccountViewHandler();
   initToolTipHandlers();
   initResizeScreenHelpers();
+  cleanUp();
 })();
+
+function cleanUp(){
+  // remove dublicate of objects-tools
+  var dublicateObject = document.querySelector('#content-main .object-tools');
+  if(dublicateObject){
+    dublicateObject.remove();
+  }
+}
 
 function Window() {
   /*
