@@ -1,7 +1,6 @@
 from django.apps import registry
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
-from django.urls.exceptions import NoReverseMatch
 
 from ..utils import SortedOrderedDict
 
@@ -60,7 +59,6 @@ class ModelLink(BaseMenuItem):
         self.model = model
         self.set_label(config)
         self.icon = config.get('icon')
-        self.config = config
 
     def set_label(self, config=None):
         if config.get('label'):
@@ -72,17 +70,14 @@ class ModelLink(BaseMenuItem):
     def create_context(self, request):
         app_label, model = self.model.split('.')
         model_label = model.lower()
-        try:
-            url = reverse(f'admin:{app_label}_{model_label}_{self.name}')
-        except NoReverseMatch:
-            raise NoReverseMatch(
-                f'Invalid config provided for menu.\
-                 No reverse found for the config- {self.config}'
-            )
+        url = reverse(f'admin:{app_label}_{model_label}_{self.name}')
         view_perm = f'{app_label}.view_{model_label}'
         change_perm = f'{app_label}.change_{model_label}'
         user = request.user
-        if user.has_perm(view_perm) or user.has_perm(change_perm):
+        has_permission_method = (
+            user.has_permission if hasattr(user, 'has_permission') else user.has_perm
+        )
+        if has_permission_method(view_perm) or has_permission_method(change_perm):
             return {'label': self.label, 'url': url, 'icon': self.icon}
         return None
 
