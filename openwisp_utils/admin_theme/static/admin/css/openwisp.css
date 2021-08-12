@@ -1239,7 +1239,7 @@ h1#site-name {
   #site-name a {
     width: 2.5rem;
     height: 2.5rem;
-    background: url(../../../static/ui/openwisp/images/openwisp-logo-small.svg)  no-repeat center;
+    background: url(../../../static/ui/openwisp/images/favicon.svg)  no-repeat center;
   }
   .hamburger {
     padding: 0.813rem 1rem;
@@ -1251,6 +1251,7 @@ h1#site-name {
   .nav {
     height: calc(100% - 3rem);
     overflow-y: auto;
+    background: #1b2431
   }
   .no-auth #site-name a {
     margin-left: 0.938rem;
