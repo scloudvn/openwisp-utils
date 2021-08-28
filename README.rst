@@ -43,7 +43,9 @@ Current features
 ----------------
 
 * `Configurable admin theme <#using-the-admin_theme>`_
+* `OpenWISP Dashboard <#openwisp-dashboard>`_
 * `Configurable navigation menu <#main-navigation-menu>`_
+* `Improved admin filters <#admin-filters>`_
 * `OpenAPI / Swagger documentation <#openwisp_api_docs>`_
 * `Model utilities <#model-utilities>`_
 * `Storage utilities <#storage-utilities>`_
@@ -535,7 +537,7 @@ Code example:
     menu elements that you can register. Different types of configurations will be discussed in the next sections.
 
     It is recommended to use ``register_menu_group`` in the ``ready`` method of the ``AppConfig``.
-    
+
     ``register_menu_items`` is obsoleted by ``register_menu_group`` and will be removed in
     future versions. Links added using ``register_menu_items`` will be shown at the top
     of navigation menu and above any ``register_menu_group`` items.
@@ -572,7 +574,7 @@ Adding a model link
 ~~~~~~~~~~~~~~~~~~~
 
 If you want to add a link that contains url of ``add`` or ``list`` page of a model
-then you can use following syntax. Users will only be able to see links for 
+then you can use following syntax. Users will only be able to see links for
 models they have permission to either view or edit.
 
 **Syntax:**
@@ -626,7 +628,7 @@ It creates a dropdown in the menu.
 **Syntax:**
 
 .. code-block:: python
-    
+
     register_menu_group(
         position=1,
         config={
@@ -659,6 +661,67 @@ Following is the description of the configuration:
 |                  | is displayed if not provided.                                |
 +------------------+--------------------------------------------------------------+
 
+``register_menu_subitem``
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It allows us to register an item in a registered group.
+
+**Syntax:**
+
+.. code-block:: python
+
+    register_menu_subitem(group_position, item_position, config)
+
++--------------------------+---------------------------------------------------------------+
+| **Parameter**            | **Description**                                               |
++--------------------------+---------------------------------------------------------------+
+| ``group_position``       | (``int``) Position of group in which item will be added.      |
++--------------------------+---------------------------------------------------------------+
+| ``item_position``        | (``int``) Position at which item should be added in the group |
++--------------------------+---------------------------------------------------------------+
+| ``config``               | (``dict``) Configuration of the item.                         |
++--------------------------+---------------------------------------------------------------+
+
+Code example:
+
+.. code-block:: python
+
+    from django.utils.translation import ugettext_lazy as _
+    from openwisp_utils.admin_theme.menu import register_menu_subitem
+
+    # To register a model link
+    register_menu_subitem(
+        group_position=10,
+        item_position=2,
+        config={
+            'label': _('Users List'),
+            'model': 'auth.User',
+            'name': 'changelist',
+            'icon': 'list-icon',
+        },
+    )
+
+    # To register a generic link
+    register_menu_subitem(
+        group_position=10,
+        item_position=2,
+        config={'label': _('My Link'), 'url': 'https://link.com'},
+    )
+
+.. note::
+    An ``ImproperlyConfigured`` exception is raised if group is not already
+    registered at ``group_position``.
+
+    An ``ImproperlyConfigured`` exception is raised if group already has an
+    item registered at ``item_position``.
+
+    You can only register a model link or a generic link.
+    An ``ImproperlyConfigured`` exception is raised
+    if you will try to register a group in place of item.
+
+    It is recommended to use ``register_menu_subitem``
+    in the ``ready`` method of the ``AppConfig``.
+
 How to use custom icons in the menu
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -679,6 +742,23 @@ Example:
 Follow the instructions in
 `Supplying custom CSS and JS for the admin theme <#supplying-custom-css-and-js-for-the-admin-theme>`_
 to know how to configure your OpenWISP instance to load custom CSS files.
+
+Admin filters
+-------------
+
+.. figure:: https://github.com/openwisp/openwisp-utils/blob/media/docs/filter.gif
+  :align: center
+
+The ``admin_theme`` sub app provides an improved UI for the changelist filter
+which occupies less space compared to the original implementation in django:
+filters are displayed horizontally on the top (instead of vertically on the side)
+and filter options are hidden in dropdown menus which are expanded once clicked.
+
+Multiple filters can be applied at same time with the help of "apply filter" button.
+This button is only visible when total number of filters is greater than 4.
+When filters in use are less or equal to 4 the "apply filter" button is not visible
+and filters work like in the original django implementation
+(as soon as a filter option is selected the filter is applied and the page is reloaded).
 
 Model utilities
 ---------------

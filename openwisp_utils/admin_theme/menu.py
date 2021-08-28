@@ -98,8 +98,14 @@ class MenuLink(BaseMenuItem):
             raise ImproperlyConfigured(
                 f'"url" should be a type of "str". Error for the config- {config}'
             )
-        self.url = url
+        self.url = self.make_django_url(url)
         self.icon = config.get('icon')
+
+    def make_django_url(self, url):
+        # Add "/" at the end of link
+        if url[-1] != '/':
+            return url + '/'
+        return url
 
 
 class MenuGroup(BaseMenuItem):
@@ -162,9 +168,10 @@ class MenuGroup(BaseMenuItem):
 
     def create_context(self, request):
         _items = []
-        for item in self.items.values():
+        for position, item in self.items.items():
             context = item.get_context(request)
             if context:
+                context['id'] = position
                 _items.append(context)
         if not _items:
             return None
@@ -177,8 +184,13 @@ def register_menu_group(position, config):
     if not isinstance(config, dict):
         raise ImproperlyConfigured('config should be a type of "dict"')
     if position in MENU:
+        item_description = 'link'
+        if isinstance(MENU[position], MenuGroup):
+            item_description = 'group'
+        label = MENU[position].label
         raise ImproperlyConfigured(
-            f'Another group is already registered at position "{position}"'
+            f'A group/link with config {config} is being registered at position "{position}",\
+                but another {item_description} named "{label}" is already registered at the same position.'
         )
     if config.get('url'):
         # It is a menu link
@@ -195,10 +207,56 @@ def register_menu_group(position, config):
     MENU.update({position: group_class})
 
 
+def register_menu_subitem(group_position, item_position, config):
+    if not isinstance(group_position, int):
+        raise ImproperlyConfigured(
+            f'Invalid group_position "{group_position}". It should be a type of "int"'
+        )
+    if not isinstance(item_position, int):
+        raise ImproperlyConfigured(
+            f'Invalid item_position "{item_position}". It should be a type of "int"'
+        )
+    if not isinstance(config, dict):
+        raise ImproperlyConfigured(
+            'Config of sub group item should be a type of "dict"'
+        )
+    if group_position not in MENU:
+        raise ImproperlyConfigured(
+            f'A group item with config {config} is being registered in a group\
+            which does not exits.',
+        )
+    group = MENU[group_position]
+    if not isinstance(group, MenuGroup):
+        raise ImproperlyConfigured(
+            f'A group item with config {config} is being registered at group_position\
+            "{group_position}" which do not contain any group.',
+        )
+    if config.get('url'):
+        # It is a menu link
+        item = MenuLink(config=config)
+    elif config.get('model'):
+        # It is a model link
+        item = ModelLink(config=config)
+    else:
+        # Unknown
+        raise ImproperlyConfigured(
+            f'Invalid config "{config}" provided for sub group item'
+        )
+    if item_position in group.items:
+        name = group.items[item_position]
+        raise ImproperlyConfigured(
+            f'A group item with config {config} is being registered at position\
+            "{item_position}" in a group but another item named "{name}" is already registered\
+            at the same position.'
+        )
+    group.items.update({item_position: item})
+
+
 def build_menu_groups(request):
     menu = []
-    for item in MENU.values():
+    for position, item in MENU.items():
         item_context = item.get_context(request)
         if item_context:
+            item_context['id'] = position
             menu.append(item_context)
     return menu
