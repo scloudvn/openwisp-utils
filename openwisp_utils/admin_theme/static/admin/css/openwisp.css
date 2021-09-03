@@ -779,7 +779,7 @@ ul.timelist a{
 div.calendar td a:hover,
 div.calendar td.selected a,
 ul.timelist a:hover{
-  background: #ffe5e5;
+  background: rgba(1, 1, 1, 0.5);
   color: #002699;
 }
 .calendarbox a.calendarnav-previous{
@@ -932,13 +932,13 @@ a.menu-item,
   font-size: 0.86rem;
   font-weight: 500;
   align-items: center;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.6);
   text-decoration: none !important;
 }
 .menu-item .icon,
 .mg-heading .icon,
 .mg-link .icon {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.6);
   width: 1.375rem;
   height: 1.375rem;
   flex-shrink: 0;
@@ -959,8 +959,8 @@ a.menu-item,
 #menu .mg-link:focus,
 .select2-results__option--highlighted[aria-selected],
 .select2-results__option[aria-selected='true'] {
-  background: #ffe5e5 !important;
-  color: #002699 !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: #fff !important;
 }
 #menu .mg-link:hover,
 #menu .mg-link:focus {
@@ -974,7 +974,7 @@ a.menu-item,
   font-size: 0.9rem;
   padding: 0.55rem 1rem;
   text-transform: capitalize;
-  color: #002699;
+  color:rgba(255, 255, 255, 0.8);
 }
 .menu-item:hover .icon,
 .mg-head:hover .icon,
@@ -989,7 +989,7 @@ a.menu-item,
 .mg-link:hover .icon,
 .mg-link:focus .icon,
 #menu a.active .icon {
-  background: #002699;
+  background: #fff;
 }
 .mg-arrow {
   flex-shrink: 0;
@@ -1037,7 +1037,7 @@ a.menu-item,
   transform: rotate(-90deg);
 }
 .menu-group.active .mg-head {
-  color: #002699;
+  color: #fff;
 }
 .mg-heading,
 .mg-list span,
@@ -1045,7 +1045,7 @@ a.menu-item,
   pointer-events: none;
 }
 .menu-group.active {
-  background: #99b3ff;
+  background: rgba(1, 1, 1, 0.5);
 }
 h1#site-name {
   margin: 0;
@@ -1073,15 +1073,16 @@ h1#site-name {
 
 /* Highlight menu item */
 #menu a.active {
-  background: #ffe5e5 !important;
-  color: #df5d43 !important;
+  background: rgba(1, 1, 1, 0.5) !important;
+  color: #fff !important;
   cursor: default;
 }
 .menu-group.active-mg:not(.active) .mg-head {
-  background: #ffe5e5 !important;
+  /* background: #ffe5e5 !important; */
+  background: rgba(1, 1, 1, 0.5) !important;
 }
 #menu a.active:hover {
-  background: #ffe5e5 !important;
+  background: rgba(1, 1, 1, 0.5) !important;
 }
 
 /****************** MENU(screen-size > 768px) ******************/
@@ -1272,7 +1273,7 @@ h1#site-name {
   #site-name a {
     width: 2.5rem;
     height: 2.5rem;
-    background: url(../../../static/ui/openwisp/images/openwisp-logo-small.svg)
+    background: url(../../../static/ui/openwisp/images/favicon.svg)
     no-repeat center;
   }
   .hamburger {
