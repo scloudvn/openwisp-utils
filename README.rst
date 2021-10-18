@@ -9,9 +9,9 @@ openwisp-utils
     :target: https://coveralls.io/github/openwisp/openwisp-utils
     :alt: Test coverage
 
-.. image:: https://requires.io/github/openwisp/openwisp-utils/requirements.svg?branch=master
-    :target: https://requires.io/github/openwisp/openwisp-utils/requirements/?branch=master
-    :alt: Requirements Status
+.. image:: https://img.shields.io/librariesio/release/github/openwisp/openwisp-utils
+  :target: https://libraries.io/github/openwisp/openwisp-utils#repository_dependencies
+  :alt: Dependency monitoring
 
 .. image:: https://badge.fury.io/py/openwisp-utils.svg
     :target: http://badge.fury.io/py/openwisp-utils
@@ -716,10 +716,10 @@ Code example:
     item registered at ``item_position``.
 
     It is only possible to register links to specific models or custom URL.
-    An ``ImproperlyConfigured`` exception is raised if the configuration of 
+    An ``ImproperlyConfigured`` exception is raised if the configuration of
     group is provided in the function.
 
-    It is recommended to use ``register_menu_subitem`` in the ``ready`` 
+    It is recommended to use ``register_menu_subitem`` in the ``ready``
     method of the ``AppConfig``.
 
 How to use custom icons in the menu
@@ -1425,11 +1425,14 @@ Example usage:
 Installing for development
 --------------------------
 
-Install sqlite:
+Install the system dependencies:
 
 .. code-block:: shell
 
     sudo apt-get install sqlite3 libsqlite3-dev
+    
+    # For running E2E Selenium tests
+    sudo apt install chromium
 
 Install your forked repo:
 
@@ -1457,6 +1460,9 @@ Set up the pre-push hook to run tests and QA checks automatically right before t
 
     openwisp-pre-push-hook --install
 
+Install WebDriver for Chromium for your browser version from `<https://chromedriver.chromium.org/home>`_
+and Extract ``chromedriver`` to one of directories from your ``$PATH`` (example: ``~/.local/bin/``).
+    
 Create database:
 
 .. code-block:: shell
