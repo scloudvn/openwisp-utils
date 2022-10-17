@@ -2,6 +2,8 @@
 var leftArrow, rightArrow, slider;
 const scrollDX = 200,
   btnAnimationTime = 100; //ms
+var gettext;
+
 (function () {
   document.addEventListener(
     'DOMContentLoaded',
@@ -11,10 +13,13 @@ const scrollDX = 200,
       slider = document.querySelector('.ow-filter-slider');
       initFilterDropdownHandler();
       initSliderHandlers();
+      initInputFilterHandler();
       filterHandlers();
       if (slider) {
         setArrowButtonVisibility();
       }
+      gettext = window.gettext || function (v) { return v; };
+      add_clear_button();
     },
     false
   );
@@ -27,7 +32,7 @@ function showFilterOptions(filter, callback = null) {
   filter.querySelector('.filter-options').style.display = 'block';
   filter.querySelector('.filter-title').setAttribute('aria-expanded', 'true');
   setTimeout(function () {
-    filter.classList.add('active');
+    filter.classList.add('ow-active');
     if (callback) {
       callback(filter);
     }
@@ -38,15 +43,15 @@ function hideFilterOptions(filter){
   if(!filter){return;}
   filter.querySelector('.filter-options').style='';
   filter.querySelector('.filter-title').setAttribute('aria-expanded','false');
-  filter.classList.remove('active');
+  filter.classList.remove('ow-active');
 }
 
 function toggleFilter(filter, callback = null) {
-  var activeFilter = document.querySelector('.ow-filter.active');
+  var activeFilter = document.querySelector('.ow-filter.ow-active');
   if (activeFilter && activeFilter !== filter) {
     hideFilterOptions(activeFilter);
   }
-  if (filter.classList.contains('active')) {
+  if (filter.classList.contains('ow-active')) {
     return hideFilterOptions(filter);
   }
   showFilterOptions(filter, callback);
@@ -63,8 +68,10 @@ function initFilterDropdownHandler() {
   // When filter title is clicked
   filters.forEach(function (filter) {
     var toggler = filter.querySelector('.filter-title');
+    if(!toggler) {
+      return;
+    }
     toggler.addEventListener('click', function () {
-      // Close if any active filter
       toggleFilter(filter);
     });
     toggler.addEventListener('keypress', function (e) {
@@ -86,15 +93,15 @@ function initFilterDropdownHandler() {
 
   // Handle click outside of an active filter
   document.addEventListener('click', function (e) {
-    var activeFilter = document.querySelector('.ow-filter.active');
+    var activeFilter = document.querySelector('.ow-filter.ow-active');
     if (activeFilter && !activeFilter.contains(e.target)) {
-      activeFilter.classList.remove('active');
+      hideFilterOptions(activeFilter);
     }
   });
 
   // Handle focus shift from filter
   document.addEventListener('focusin', function (e) {
-    var activeFilter = document.querySelector('.ow-filter.active');
+    var activeFilter = document.querySelector('.ow-filter.ow-active');
     if (activeFilter && !activeFilter.contains(e.target)) {
       hideFilterOptions(activeFilter);
     }
@@ -108,9 +115,9 @@ function initFilterDropdownHandler() {
   filterValues.forEach(function (filterValue) {
     filterValue.addEventListener('click', function (e) {
       e.preventDefault();
-      let filter = document.querySelector('.ow-filter.active');
-      let selectedOption = filter.querySelector('.selected-option');
-      let selectedElement = filter.querySelector('.selected');
+      var filter = document.querySelector('.ow-filter.ow-active');
+      var selectedOption = filter.querySelector('.selected-option');
+      var selectedElement = filter.querySelector('.selected');
       selectedElement.classList.remove('selected');
       filterValue.classList.add('selected');
       var text = filterValue.innerHTML;
@@ -164,6 +171,29 @@ function setArrowButtonVisibility() {
   }
 }
 
+function initInputFilterHandler() {
+  if (!document.querySelector('#ow-apply-filter')) {
+    return;
+  }
+  var inputFilterFields = document.querySelectorAll('.ow-input-filter-field');
+  inputFilterFields.forEach(function (field) {
+    field.addEventListener('change', function (e) {
+      var filter = e.target.closest('.ow-input-filter'),
+        selectedOption = filter.querySelector('.filter-options a'),
+        value = e.target.value,
+        newHref = '?' + selectedOption.getAttribute('parameter_name') +
+          '=' + value;
+      selectedOption.setAttribute('href', newHref);
+    });
+  });
+  var inputFilterForms = document.querySelectorAll('.ow-input-filter form');
+  inputFilterForms.forEach(function(form){
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+    });
+  });
+}
+
 function initSliderHandlers() {
   // When left arrow is clicked
   if (leftArrow) {
@@ -189,6 +219,9 @@ function filterHandlers() {
     const selectedOptions = document.querySelectorAll(
       '.filter-options .selected'
     );
+    const inputFilters = document.querySelectorAll(
+      '.ow-input-filter .filter-options a'
+    );
     // Create params map which knows about the last applied filters
     var path = window.location.href.split('?');
     var paramsMap = {};
@@ -200,6 +233,7 @@ function filterHandlers() {
       });
     }
     var qs = Object.assign({}, paramsMap);
+    var appliedFilters = {};  // To manage duplicate filters
     // qs will be modified according to the last applied filters
     // and current filters that need to be applied
     selectedOptions.forEach(function (selectedOption) {
@@ -217,7 +251,7 @@ function filterHandlers() {
         });
       Object.keys(paramsMap).forEach(function (key) {
         /*
-            LOGIC: 
+            LOGIC:
               For any filter if we check the values present in the options available
               for it, we will notice that only its options have the different pararms
               that can change or remove from currently applied filter but all other
@@ -227,9 +261,11 @@ function filterHandlers() {
           if (key in currParamsMap) {
             if (currParamsMap[key] != paramsMap[key]) {
               qs[key] = currParamsMap[key];
+              appliedFilters[key] = true;
             }
           } else {
             delete qs[key];
+            appliedFilters[key] = false;
           }
         }
         delete currParamsMap[key];
@@ -237,7 +273,19 @@ function filterHandlers() {
       Object.keys(currParamsMap).forEach(function (key) {
         // Add if any new filter is applied
         qs[key] = currParamsMap[key];
+        appliedFilters[key] = true;
       });
+    });
+    inputFilters.forEach(function (filter){
+      var href = filter.getAttribute('href');
+      var [key, val] = href.substring(1).split('=');
+      if(val.length === 0 && key in qs){
+        if(!(key in appliedFilters) || !appliedFilters[key]){
+          delete qs[key];
+        }
+      } else if(val.length !== 0) {
+        qs[key] = val;
+      }
     });
     var queryParams = '';
     if (Object.keys(qs).length) {
@@ -247,4 +295,24 @@ function filterHandlers() {
     }
     window.location.href = window.location.pathname + queryParams;
   });
+}
+
+function add_clear_button(){
+  /*
+  Some django versions do not support filter clear functionality
+  */ 
+  var path = window.location.href.split('?');
+  if (
+    path.length > 1 &&
+    path[1] != '' &&
+    !document.querySelector('#changelist-filter-clear')
+  ) {
+    var button = document.createElement('h3');
+    button.setAttribute('id', 'changelist-filter-clear');
+    var link = document.createElement('a');
+    link.setAttribute('href', path[0]);
+    link.innerText = gettext('Clear all filters');
+    button.appendChild(link);
+    document.querySelector('.filters-control').prepend(button);
+  }
 }

@@ -20,11 +20,11 @@ class Shelf(TimeStampedEditableModel):
     )
     name = models.CharField(_('name'), max_length=64)
     books_type = models.CharField(
-        _("Type of Books"), choices=TYPES, null=True, blank=True, max_length=50
+        _("Type of book"), choices=TYPES, null=True, blank=True, max_length=50
     )
     books_count = models.PositiveIntegerField(_("Number of books"), default=0)
     locked = models.BooleanField(_("Is locked"), default=True)
-    owner = models.OneToOneField(
+    owner = models.ForeignKey(
         "auth.User",
         blank=True,
         null=True,

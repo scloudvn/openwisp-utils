@@ -1,3 +1,55 @@
+/* VARIABLE DEFINITIONS TO PREVENT DARK MODE */
+:root {
+  --primary: #79aec8 !important;
+  --secondary: #417690 !important;
+  --accent: #f5dd5d !important;
+  --primary-fg: #fff !important;
+
+  --body-fg: #333 !important;
+  --body-bg: #fff !important;
+  --body-quiet-color: #666 !important;
+  --body-loud-color: #000 !important;
+
+  --header-color: #ffc !important;
+  --header-branding-color: var(--accent) !important;
+  --header-bg: var(--secondary) !important;
+  --header-link-color: var(--primary-fg) !important;
+
+  --breadcrumbs-fg: #c4dce8 !important;
+  --breadcrumbs-link-fg: var(--body-bg) !important;
+  --breadcrumbs-bg: var(--primary) !important;
+
+  --link-fg: #447e9b !important;
+  --link-hover-color: #036 !important;
+  --link-selected-fg: #5b80b2 !important;
+
+  --hairline-color: #e8e8e8 !important;
+  --border-color: #ccc !important;
+
+  --error-fg: #ba2121 !important;
+
+  --message-success-bg: #dfd !important;
+  --message-warning-bg: #ffc !important;
+  --message-error-bg: #ffefef !important;
+
+  --darkened-bg: #f8f8f8 !important; /* A bit darker than --body-bg */
+  --selected-bg: #e4e4e4 !important; /* E.g. selected table cells */
+  --selected-row: #ffc !important;
+
+  --button-fg: #fff !important;
+  --button-bg: var(--primary) !important;
+  --button-hover-bg: #609ab6 !important;
+  --default-button-bg: var(--secondary) !important;
+  --default-button-hover-bg: #205067 !important;
+  --close-button-bg: #888 !important; /* Previously #bbb, contrast 1.92 */
+  --close-button-hover-bg: #747474 !important;
+  --delete-button-bg: #ba2121 !important;
+  --delete-button-hover-bg: #a41515 !important;
+
+  --object-tools-fg: var(--button-fg) !important;
+  --object-tools-bg: var(--close-button-bg) !important;
+  --object-tools-hover-bg: var(--close-button-hover-bg) !important;
+}
 body {
   min-width: 320px;
 }
@@ -360,6 +412,7 @@ div.submit-row a.deletelink:active,
   background: #b31e00;
   outline: 0 none;
 }
+#content .submit-row p.deletelink-box { margin: 0; }
 
 /* For any normal, default, dark button [ class="default-btn" ] */
 
@@ -517,7 +570,6 @@ input[type='button']:hover,
   justify-content: center;
   align-items: center;
   background: #fff;
-  border-bottom: 1px solid #00000026;
 }
 .hamburger span {
   background: url(../../ui/openwisp/images/hamburger.svg) no-repeat center;
@@ -664,11 +716,27 @@ input[type='button']:hover,
 #content-main .object-tools {
   display: none;
 }
+#content-main .form-row a:link {
+  text-decoration: underline;
+}
+#content-main .form-row a:link:hover, #content-main a:link:focus {
+  text-decoration: none;
+}
 .title-wrapper h1,
 .title-wrapper h2{
   display: inline-block;
   margin: 0px;
   margin-bottom: 20px;
+}
+.title-wrapper h2 {
+  margin-left: 10px;
+  font-weight: normal;
+}
+.title-wrapper h2::before {
+  content: "(";
+}
+.title-wrapper h2::after {
+  content: ")";
 }
 .title-wrapper .object-tools{
   margin-top: -4px;
@@ -761,8 +829,8 @@ div.calendar caption{
 .calendarbox a.calendarnav-previous,
 .calendarbox a.calendarnav-next{
   background: rgb(255 255 255 / 75%);
-  mask-size: contain!important;
-  -webkit-mask-size: contain!important;
+  mask-size: contain !important;
+  -webkit-mask-size: contain !important;
   top: 15px;
 }
 div.calendarbox, div.clockbox{
@@ -863,7 +931,7 @@ div.calendar-shortcuts a:hover{
   }
   .title-wrapper .object-tools {
     display: inline-block;
-    margin-bottom: 15px!important;
+    margin-bottom: 15px !important;
   }
   .title-wrapper .object-tools li {
     margin-left: 0px;
@@ -923,7 +991,7 @@ div#container.no-auth, .popup div#container{
   left: 0;
 }
 .menu-bar {
-  border-bottom: 2px solid #f6f6f6;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.075);
 }
 a.menu-item,
 .mg-link,
@@ -1271,7 +1339,6 @@ h1#site-name {
   }
   h1#site-name {
     padding: 0;
-    margin-left: 10px;
   }
 
   #site-name a {
@@ -1550,6 +1617,10 @@ body::-webkit-scrollbar {
   mask-image: url(../../ui/openwisp/images/montoring-checks.svg);
   -webkit-mask-image: url(../../ui/openwisp/images/montoring-checks.svg);
 }
+.ow-monitoring-wifi {
+  mask-image: url(../../ui/openwisp/images/monitoring-wifi.svg);
+  -webkit-mask-image: url(../../ui/openwisp/images/monitoring-wifi.svg);
+}
 
 /* FIRMWARE */
 
@@ -1586,4 +1657,12 @@ body::-webkit-scrollbar {
 .ow-node{
   mask-image: url(../../ui/openwisp/images/node.svg);
   -webkit-mask-image: url(../../ui/openwisp/images/node.svg);
+}
+
+/* LOGIN SCREEN */
+@media only screen and (max-width: 576px) {
+
+  .login #container  {
+    width: auto !important;
+  }
 }

@@ -1,44 +1,23 @@
-from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.urls import reverse
-from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from ..models import Book, Operator, Shelf
+from . import CreateMixin
 from .utils import SeleniumTestMixin
 
 
-class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        chrome_options = webdriver.ChromeOptions()
-        if getattr(settings, 'SELENIUM_HEADLESS', True):
-            chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--window-size=1366,768')
-        chrome_options.add_argument('--ignore-certificate-errors')
-        chrome_options.add_argument('--remote-debugging-port=9222')
-        capabilities = DesiredCapabilities.CHROME
-        capabilities['goog:loggingPrefs'] = {'browser': 'ALL'}
-        cls.web_driver = webdriver.Chrome(
-            options=chrome_options, desired_capabilities=capabilities
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.web_driver.quit()
-        super().tearDownClass()
+class TestMenu(SeleniumTestMixin, StaticLiveServerTestCase):
+    def setUp(self):
+        self.admin = self._create_admin()
 
     def tearDown(self):
         # Clear local storage
         self.web_driver.execute_script('window.localStorage.clear()')
-
-    def setUp(self):
-        self.admin = self._create_admin()
 
     def _test_menu_state(self, open, is_narrow=False):
         logo = self._get_logo()
@@ -76,7 +55,10 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
                 menu_toggle.get_attribute('title'), self.config['maximize_menu']
             )
             container_class = container.get_attribute('class')
-            self.assertEqual(container_class, 'toggle-menu')
+            self.assertIn(
+                'toggle-menu',
+                container_class,
+            )
 
     def _test_login_and_logout_page(self, is_logged_in=True):
         if not is_logged_in:
@@ -95,7 +77,9 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
         # Test login page
         self.web_driver.refresh()
         WebDriverWait(self.web_driver, 2).until(
-            EC.visibility_of_element_located((By.XPATH, self.config['site_name_xpath']))
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, self.config['site_name_css_selector'])
+            )
         )
         hamburger = self._get_hamburger()
         logo = self._get_logo()
@@ -186,13 +170,14 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
             try:
                 WebDriverWait(self.web_driver, 2).until(
                     EC.visibility_of_element_located(
-                        (By.XPATH, '//*[@class="nav"]/div[1]/div[2]')
+                        (By.CSS_SELECTOR, '#mg-dropdown-32')
                     )
                 )
             except TimeoutException:
                 is_visible = False
             self.assertEqual(
-                is_visible, True,
+                is_visible,
+                True,
             )
             self.assertEqual(mg_dropdown_label.is_displayed(), True)
             # Test mg dropdown gets invisible on clicking mg head
@@ -212,7 +197,10 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
             try:
                 WebDriverWait(self.web_driver, 2).until(
                     EC.visibility_of_element_located(
-                        (By.XPATH, '//*[@class="nav"]/div[1]/div[1]/div[1]/span[2]')
+                        (
+                            By.CSS_SELECTOR,
+                            '#mg-control-32 > div:nth-child(1) > span:nth-child(2)',
+                        )
                     )
                 )
             except TimeoutException:
@@ -249,7 +237,7 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
             self.web_driver.refresh()
             WebDriverWait(self.web_driver, 2).until(
                 EC.visibility_of_element_located(
-                    (By.XPATH, self.config['site_name_xpath'])
+                    (By.CSS_SELECTOR, self.config['site_name_css_selector'])
                 )
             )
             self._test_menu_state(True)
@@ -262,7 +250,7 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
             self.web_driver.refresh()
             WebDriverWait(self.web_driver, 2).until(
                 EC.visibility_of_element_located(
-                    (By.XPATH, self.config['hamburger_xpath'])
+                    (By.CSS_SELECTOR, self.config['hamburger_css_selector'])
                 )
             )
             self._test_menu_state(False)
@@ -284,15 +272,17 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
 
     def test_active_menu_group(self):
         """
-            Test active menu group:
-            - Active group should close only when clicked on menu else
-              it should remain open.
+        Test active menu group:
+        - Active group should close only when clicked on menu else
+          it should remain open.
         """
         self.login()
         url = reverse('admin:auth_user_changelist')
         self.open(url)
         WebDriverWait(self.web_driver, 2).until(
-            EC.visibility_of_element_located((By.XPATH, self.config['site_name_xpath']))
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, self.config['site_name_css_selector'])
+            )
         )
         with self.subTest('Test active menu group on wide screen'):
             active_mg = self._get_active_mg()
@@ -319,7 +309,7 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
             self.web_driver.refresh()
             WebDriverWait(self.web_driver, 2).until(
                 EC.visibility_of_element_located(
-                    (By.XPATH, self.config['hamburger_xpath'])
+                    (By.CSS_SELECTOR, self.config['hamburger_css_selector'])
                 )
             )
             active_mg = self._get_active_mg()
@@ -341,7 +331,7 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
             account_button = self._get_account_button()
             WebDriverWait(self.web_driver, 2).until(
                 EC.visibility_of_element_located(
-                    (By.XPATH, self.config['hamburger_xpath'])
+                    (By.CSS_SELECTOR, self.config['hamburger_css_selector'])
                 )
             )
             hamburger.click()
@@ -375,7 +365,9 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
         self._open_menu()
         self.web_driver.refresh()
         WebDriverWait(self.web_driver, 2).until(
-            EC.visibility_of_element_located((By.XPATH, self.config['hamburger_xpath']))
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, self.config['hamburger_css_selector'])
+            )
         )
         with self.subTest('Test menu remains close on page change or refresh'):
             self._test_menu_state(False)
@@ -408,3 +400,340 @@ class TestMenu(StaticLiveServerTestCase, SeleniumTestMixin):
             self._test_popup_page()
         self._test_login_and_logout_page()
         self.web_driver.set_window_size(1366, 768)
+
+
+class TestBasicFilter(SeleniumTestMixin, StaticLiveServerTestCase, CreateMixin):
+    shelf_model = Shelf
+    book_model = Book
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    def setUp(self):
+        self.admin = self._create_admin()
+        self.web_driver.set_window_size(1600, 768)
+        self._create_test_data()
+
+    def _create_test_data(self):
+        # create two users
+        tester1 = self._create_admin(username='tester1')
+        self._create_admin(username='tester2')
+        # creating 2 Horror and 2 Fantasy shelfs.
+        # tester1 is the owner of all books
+        for i in range(2):
+            horror_shelf = self._create_shelf(
+                name='horror' + str(i), books_type='HORROR', owner=tester1
+            )
+        for i in range(2):
+            fantasy_shelf = self._create_shelf(
+                name='fantasy' + str(i), books_type='FANTASY', owner=tester1
+            )
+        self._create_book(name='horror book', shelf=horror_shelf)
+        self._create_book(name='fantasy book', shelf=fantasy_shelf)
+
+    def test_shelf_filter(self):
+        # It has total number of filters greater than 4
+        self.login()
+        url = reverse('admin:test_project_shelf_changelist')
+        self.open(url)
+        dropdown = self._get_filter_dropdown('type-of-book')
+        title = self._get_filter_title('type-of-book')
+        main_content = self._get_main_content()
+        selected_option = self._get_filter_selected_option('type-of-book')
+        with self.subTest('Test visibility of filter'):
+            self.assertEqual(self.check_exists_by_id('ow-changelist-filter'), True)
+
+        with self.subTest('Test visibility of filter button'):
+            self.assertEqual(self.check_exists_by_id('ow-apply-filter'), True)
+
+        with self.subTest('Test filter dropdown is not visible'):
+            self.assertEqual(dropdown.is_displayed(), False)
+
+        with self.subTest('Test anchor tag in filter options'):
+            self.assertEqual(
+                self.check_exists_by_css_selector('.type-of-book .filter-options a'),
+                True,
+            )
+
+        with self.subTest('Test filter dropdown is visbility'):
+            title.click()
+            self.wait_for_dropdown('type-of-book')
+            self.assertEqual(dropdown.is_displayed(), True)
+            title.click()
+            self.assertEqual(dropdown.is_displayed(), False)
+            title.click()
+            self.wait_for_dropdown('type-of-book')
+            self.assertEqual(dropdown.is_displayed(), True)
+            main_content.click()
+            self.assertEqual(dropdown.is_displayed(), False)
+
+        with self.subTest('Test changing of filter option'):
+            title.click()  # Open dropdown
+            self.wait_for_dropdown('type-of-book')
+            old_value = selected_option.get_attribute('innerText')
+            fantasy_option = self._get_filter_anchor('books_type__exact=FANTASY')
+            fantasy_option.click()
+            self.assertEqual(dropdown.is_displayed(), False)
+            self.assertNotEqual(selected_option.get_attribute('innerText'), old_value)
+            self.assertEqual(selected_option.get_attribute('innerText'), 'FANTASY')
+
+        filter_button = self._get_filter_button()
+        with self.subTest('Test apply filter'):
+            filter_button.click()
+            WebDriverWait(self.web_driver, 2).until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, '#site-name'))
+            )
+            self.assertEqual(self.check_exists_by_id('changelist-filter-clear'), True)
+            paginator = self.web_driver.find_element_by_css_selector('.paginator')
+            self.assertEqual(paginator.get_attribute('innerText'), '2 shelfs')
+
+        with self.subTest('Test clear filter button'):
+            clear_button = self._get_clear_button()
+            clear_button.click()
+            WebDriverWait(self.web_driver, 2).until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, '#site-name'))
+            )
+            paginator = self.web_driver.find_element_by_css_selector('.paginator')
+            self.assertEqual(paginator.get_attribute('innerText'), '4 shelfs')
+
+        with self.subTest('Test multiple filters'):
+            # Select Fantasy book type
+            books_type_title = self._get_filter_title('type-of-book')
+            username_title = self._get_filter_title('username')
+            books_type_title.click()
+            fantasy_option = self._get_filter_anchor('books_type__exact=FANTASY')
+            fantasy_option.click()
+            username_title.click()
+            username_option = self._get_filter_anchor('owner__username=tester2')
+            username_option.click()
+            filter_button = self._get_filter_button()
+            filter_button.click()
+            WebDriverWait(self.web_driver, 2).until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, '#site-name'))
+            )
+            paginator = self.web_driver.find_element_by_css_selector('.paginator')
+            self.assertEqual(paginator.get_attribute('innerText'), '0 shelfs')
+
+    def test_book_filter(self):
+        # It has total number of filters less than 4
+        self.login()
+        url = reverse('admin:test_project_book_changelist')
+        self.open(url)
+        with self.subTest('Test visibility of filter'):
+            self.assertEqual(self.check_exists_by_id('ow-changelist-filter'), True)
+
+        with self.subTest('Test filter button is not visible'):
+            self.assertEqual(self.check_exists_by_id('ow-apply-filter'), False)
+
+        with self.subTest('Test anchor tag in filter options'):
+            self.assertEqual(
+                self.check_exists_by_css_selector('.name .filter-options a'), True
+            )
+
+        with self.subTest('Test dropdown and apply filter'):
+            dropdown = self._get_filter_dropdown('name')
+            title = self._get_filter_title('name')
+            option = self._get_filter_anchor('name=horror+book')
+            selected_option = self._get_filter_selected_option('name')
+            old_value = selected_option.get_attribute('innerText')
+            self.assertEqual(dropdown.is_displayed(), False)
+            title.click()
+            self.wait_for_dropdown('name')
+            self.assertEqual(dropdown.is_displayed(), True)
+            option.click()
+            WebDriverWait(self.web_driver, 2).until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, '#site-name'))
+            )
+            selected_option = self._get_filter_selected_option('name')
+            self.assertNotEqual(old_value, selected_option.get_attribute('innerText'))
+            self.assertEqual(selected_option.get_attribute('innerText'), 'horror book')
+            paginator = self.web_driver.find_element_by_css_selector('.paginator')
+            self.assertEqual(paginator.get_attribute('innerText'), '1 book')
+
+
+class TestInputFilters(SeleniumTestMixin, CreateMixin, StaticLiveServerTestCase):
+    shelf_model = Shelf
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    def setUp(self):
+        super().setUp()
+        self.admin = self._create_admin()
+
+    def test_input_filters(self):
+        url = reverse('admin:test_project_shelf_changelist')
+        user = self._create_user()
+        horror_shelf = self._create_shelf(
+            name='Horror', books_type='HORROR', owner=self.admin
+        )
+        self._create_shelf(name='Factual', books_type='FACTUAL', owner=user)
+        self.login()
+        horror_result_xpath = (
+            '//*[@id="result_list"]/tbody/tr/th/a[contains(text(), "Horror")]'
+        )
+        factual_result_xpath = (
+            '//*[@id="result_list"]/tbody/tr/th/a[contains(text(), "Factual")]'
+        )
+
+        with self.subTest('Test SimpleInputFilter'):
+            self.open(url)
+            input_field = self._get_simple_input_filter()
+            input_field.send_keys('Horror')
+            self._get_filter_button().click()
+            # Horror shelf is present
+            self.web_driver.find_element_by_xpath(horror_result_xpath)
+            with self.assertRaises(NoSuchElementException):
+                # Factual shelf is absent
+                self.web_driver.find_element_by_xpath(factual_result_xpath)
+            # Both shelves should be present after clearing filter
+            self.web_driver.find_element_by_css_selector('.field-clear').click()
+            self.web_driver.find_element_by_xpath(horror_result_xpath)
+            self.web_driver.find_element_by_xpath(factual_result_xpath)
+
+        with self.subTest('Test InputFilter'):
+            self.open(url)
+            input_field = self._get_input_filter()
+            input_field.send_keys('HORROR')
+            self._get_filter_button().click()
+            # Horror shelf is present
+            self.web_driver.find_element_by_xpath(horror_result_xpath)
+            with self.assertRaises(NoSuchElementException):
+                # Factual shelf is absent
+                self.web_driver.find_element_by_xpath(factual_result_xpath)
+            # Both shelves should be present after clearing filter
+            self.web_driver.find_element_by_css_selector('.field-clear').click()
+            self.web_driver.find_element_by_xpath(horror_result_xpath)
+            self.web_driver.find_element_by_xpath(factual_result_xpath)
+
+        with self.subTest('Test InputFilter: UUID'):
+            self.open(url)
+            input_field = self.web_driver.find_element_by_css_selector(
+                'input[name=id__exact]'
+            )
+            input_field.send_keys(str(horror_shelf.id))
+            self._get_filter_button().click()
+            # Horror shelf is present
+            self.web_driver.find_element_by_xpath(horror_result_xpath)
+            with self.assertRaises(NoSuchElementException):
+                # Factual shelf is absent
+                self.web_driver.find_element_by_xpath(factual_result_xpath)
+            # Both shelves should be present after clearing filter
+            self.web_driver.find_element_by_css_selector('.field-clear').click()
+            self.web_driver.find_element_by_xpath(horror_result_xpath)
+            self.web_driver.find_element_by_xpath(factual_result_xpath)
+
+        with self.subTest('Test InputFilter: Related field'):
+            admin_xpath = f'//*[@id="result_list"]/tbody/tr/th/a[contains(text(), "{self.admin.username}")]'
+            user_xpath = f'//*[@id="result_list"]/tbody/tr/th/a[contains(text(), "{user.username}")]'
+            self.open(reverse('admin:auth_user_changelist'))
+            input_field = self.web_driver.find_element_by_xpath(
+                '//*[@id="ow-changelist-filter"]/div[1]/div/div/div[2]/div[1]/form/input'
+            )
+            input_field.send_keys(str(horror_shelf.id))
+            self._get_filter_button().click()
+            # Admin user is present
+            self.web_driver.find_element_by_xpath(admin_xpath)
+            with self.assertRaises(NoSuchElementException):
+                # User is absent
+                self.web_driver.find_element_by_xpath(user_xpath)
+            # Both users should be present after clearing filter
+            self.web_driver.find_element_by_css_selector('.field-clear').click()
+            self.web_driver.find_element_by_xpath(admin_xpath)
+            self.web_driver.find_element_by_xpath(user_xpath)
+
+
+class TestDashboardCharts(SeleniumTestMixin, CreateMixin, StaticLiveServerTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    def setUp(self):
+        self.admin = self._create_admin()
+        self.web_driver.set_window_size(1600, 768)
+
+    def test_pie_chart_zero_annotation(self):
+        Operator.objects.all().delete()
+        self.login()
+        url = reverse('admin:index')
+        self.open(url)
+        try:
+            WebDriverWait(self.web_driver, 10).until(
+                EC.visibility_of_element_located(
+                    (
+                        By.CSS_SELECTOR,
+                        '.operator-project-distribution .annotation-text tspan',
+                    )
+                )
+            )
+        except TimeoutException:
+            self.fail('Failed to find annotation text element in the chart')
+        else:
+            annotation_text = self.web_driver.find_element_by_css_selector(
+                '.operator-project-distribution .annotation-text tspan'
+            )
+            self.assertEqual(annotation_text.text, '0')
+
+
+class TestAutocompleteFilter(SeleniumTestMixin, CreateMixin, StaticLiveServerTestCase):
+    shelf_model = Shelf
+    book_model = Book
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    def setUp(self):
+        super().setUp()
+        self.admin = self._create_admin()
+        self.login()
+
+    def test_auto_complete_filter(self):
+        url = reverse('admin:test_project_book_changelist')
+        user = self._create_user()
+        horror_shelf = self._create_shelf(
+            name='Horror', books_type='HORROR', owner=self.admin
+        )
+        factual_shelf = self._create_shelf(
+            name='Factual', books_type='FACTUAL', owner=user
+        )
+        book1 = self._create_book(name='Book 1', shelf=horror_shelf)
+        book2 = self._create_book(name='Book 2', shelf=factual_shelf)
+        select_id = 'id-shelf__id-dal-filter'
+        filter_css_selector = f'#select2-{select_id}-container'
+        filter_null_option_xpath = f'//*[@id="select2-{select_id}-results"]/li[1]'
+        filter_option_xpath = f'//*[@id="select2-{select_id}-results"]/li[3]'
+
+        result_xpath = '//*[@id="result_list"]/tbody/tr/th/a[contains(text(), "{}")]'
+        self.open(url)
+        self.assertIn(
+            f'<select name="shelf__id" id="{select_id}" class="admin-autocomplete',
+            self.web_driver.page_source,
+        )
+        self.web_driver.find_element_by_css_selector(filter_css_selector).click()
+        self.web_driver.find_element_by_css_selector('.select2-container--open')
+        self.assertIn(horror_shelf.name, self.web_driver.page_source)
+        self.assertIn(factual_shelf.name, self.web_driver.page_source)
+        self.web_driver.find_element_by_xpath(filter_option_xpath).click()
+        self.assertIn(str(factual_shelf.id), self.web_driver.current_url)
+        self.web_driver.find_element_by_css_selector(filter_css_selector)
+        self.assertNotIn(horror_shelf.name, self.web_driver.page_source)
+        self.assertIn(factual_shelf.name, self.web_driver.page_source)
+        with self.assertRaises(NoSuchElementException):
+            # Book 1 is absent
+            self.web_driver.find_element_by_xpath(result_xpath.format(book1.name))
+        # Book 2 is present
+        self.web_driver.find_element_by_xpath(result_xpath.format(book2.name))
+        # Test null filter
+        self.web_driver.find_element_by_css_selector(filter_css_selector).click()
+        self.web_driver.find_element_by_css_selector('.select2-container--open')
+        self.web_driver.find_element_by_xpath(filter_null_option_xpath).click()
+        self.assertIn('shelf__id__isnull=true', self.web_driver.current_url)
+        with self.assertRaises(NoSuchElementException):
+            # Book 1 is absent
+            self.web_driver.find_element_by_xpath(result_xpath.format(book1.name))
+        with self.assertRaises(NoSuchElementException):
+            # Book 2 is absent
+            self.web_driver.find_element_by_xpath(result_xpath.format(book2.name))

@@ -51,6 +51,7 @@ Current features
 * `Storage utilities <#storage-utilities>`_
 * `Admin utilities <#admin-utilities>`_
 * `Code utilities <#code-utilities>`_
+* `Admin Theme utilities <#admin-theme-utilities>`_
 * `REST API utilities <#rest-api-utilities>`_
 * `Test utilities <#test-utilities>`_
 * `Quality assurance checks <#quality-assurance-checks>`_
@@ -113,6 +114,8 @@ Add ``openwisp_utils.admin_theme`` to ``INSTALLED_APPS`` in ``settings.py``:
         'django.contrib.staticfiles',
 
         'openwisp_utils.admin_theme',    # <----- add this
+        # add when using autocomplete filter
+        'admin_auto_filters',    # <----- add this
 
         'django.contrib.sites',
         # admin
@@ -236,7 +239,9 @@ shipped by
 `OpenWISP Monitoring <https://github.com/openwisp/openwisp-monitoring>`_
 but can be used to include any custom element in the dashboard.
 
-**Note**: templates are loaded before charts.
+**Note**: it is possible to register templates to be loaded
+before or after charts using the ``after_charts`` keyword argument
+(see below).
 
 **Syntax:**
 
@@ -252,6 +257,10 @@ but can be used to include any custom element in the dashboard.
 | ``config``         | (``dict``) The configuration of the template.                                    |
 +--------------------+----------------------------------------------------------------------------------+
 | ``extra_config``   | **optional** (``dict``) Extra configuration you want to pass to custom template. |
++--------------------+----------------------------------------------------------------------------------+
+| ``after_charts``   | **optional** (``bool``) Whether the template should be loaded after dashboard    |
+|                    | charts. Defaults to ``False``, i.e. templates are loaded before dashboard        |
+|                    | charts by default.                                                               |
 +--------------------+----------------------------------------------------------------------------------+
 
 Following properties can be configured for each template ``config``:
@@ -270,28 +279,29 @@ Code example:
 
 .. code-block:: python
 
-	from openwisp_utils.admin_theme import register_dashboard_template
+    from openwisp_utils.admin_theme import register_dashboard_template
 
-  register_dashboard_template(
-      position=0,
-      config={
-          'template': 'admin/dashboard/device_map.html',
-          'css': (
-              'monitoring/css/device-map.css',
-              'leaflet/leaflet.css',
-              'monitoring/css/leaflet.fullscreen.css',
-          ),
-          'js': (
-              'monitoring/js/device-map.js',
-              'leaflet/leaflet.js',
-              'leaflet/leaflet.extras.js',
-              'monitoring/js/leaflet.fullscreen.min.js'
-          )
-      },
-      extra_config={
-          'optional_variable': 'any_valid_value',
-      },
-  )
+    register_dashboard_template(
+        position=0,
+        config={
+            'template': 'admin/dashboard/device_map.html',
+            'css': (
+                'monitoring/css/device-map.css',
+                'leaflet/leaflet.css',
+                'monitoring/css/leaflet.fullscreen.css',
+            ),
+            'js': (
+                'monitoring/js/device-map.js',
+                'leaflet/leaflet.js',
+                'leaflet/leaflet.extras.js',
+                'monitoring/js/leaflet.fullscreen.min.js'
+            )
+        },
+        extra_config={
+            'optional_variable': 'any_valid_value',
+        },
+        after_charts=True,
+    )
 
 It is recommended to register dashboard templates from the ``ready``
 method of the AppConfig of the app where the templates are defined.
@@ -350,38 +360,59 @@ and optionally, how the returned values have to be colored and labeled.
 
 Following properties can be configured for each chart ``config``:
 
-+-----------------+------------------------------------------------------------------------------------------------------+
-| **Property**    | **Description**                                                                                      |
-+-----------------+------------------------------------------------------------------------------------------------------+
-| ``query_param`` | It is a required property in form of ``dict`` containing following properties:                       |
-|                 |                                                                                                      |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-|                 | | **Property**  | **Description**                                                                 |  |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-|                 | | ``name``      | (``str``) Chart title shown in the user interface.                              |  |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-|                 | | ``app_label`` | (``str``) App label of the model that will be used to query the database.       |  |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-|                 | | ``model``     | (``str``) Name of the model that will be used to query the database.            |  |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-|                 | | ``group_by``  | (``str``) The property which will be used to group values.                      |  |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-|                 | | ``annotate``  | Alternative to ``group_by``, ``dict`` used for more complex queries.            |  |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-|                 | | ``aggregate`` | Alternative to ``group_by``, ``dict`` used for more complex queries.            |  |
-|                 | +---------------+---------------------------------------------------------------------------------+  |
-+-----------------+------------------------------------------------------------------------------------------------------+
-| ``colors``      | An **optional** ``dict`` which can be used to define colors for each distinct                        |
-|                 | value shown in the pie charts.                                                                       |
-+-----------------+------------------------------------------------------------------------------------------------------+
-| ``labels``      | An **optional** ``dict`` which can be used to define translatable strings for each distinct          |
-|                 | value shown in the pie charts. Can be used also to provide fallback human readable values for        |
-|                 | raw values stored in the database which would be otherwise hard to understand for the user.          |
-+-----------------+------------------------------------------------------------------------------------------------------+
-| ``filters``     | An **optional** ``dict`` which can be used when using ``aggregate`` and ``annotate`` in              |
-|                 | ``query_params`` to define the link that will be generated to filter results (pie charts are         |
-|                 | clickable and clicking on a portion of it will show the filtered results).                           |
-+-----------------+------------------------------------------------------------------------------------------------------+
++------------------+---------------------------------------------------------------------------------------------------------+
+| **Property**     | **Description**                                                                                         |
++------------------+---------------------------------------------------------------------------------------------------------+
+| ``query_params`` | It is a required property in form of ``dict`` containing following properties:                          |
+|                  |                                                                                                         |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | **Property**           | **Description**                                                           |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``name``               | (``str``) Chart title shown in the user interface.                        |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``app_label``          | (``str``) App label of the model that will be used to query the database. |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``model``              | (``str``) Name of the model that will be used to query the database.      |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``group_by``           | (``str``) The property which will be used to group values.                |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``annotate``           | Alternative to ``group_by``, ``dict`` used for more complex queries.      |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``aggregate``          | Alternative to ``group_by``, ``dict`` used for more complex queries.      |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``organization_field`` | (``str``) If the model does not have a direct relation with the           |  |
+|                  | |                        | ``Organization`` model, then indirect relation can be specified using     |  |
+|                  | |                        | this property. E.g.: ``device__organization_id``.                         |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
++------------------+---------------------------------------------------------------------------------------------------------+
+| ``colors``       | An **optional** ``dict`` which can be used to define colors for each distinct                           |
+|                  | value shown in the pie charts.                                                                          |
++------------------+---------------------------------------------------------------------------------------------------------+
+| ``labels``       | An **optional** ``dict`` which can be used to define translatable strings for each distinct             |
+|                  | value shown in the pie charts. Can be used also to provide fallback human readable values for           |
+|                  | raw values stored in the database which would be otherwise hard to understand for the user.             |
++------------------+---------------------------------------------------------------------------------------------------------+
+| ``filters``      | An **optional** ``dict`` which can be used when using ``aggregate`` and ``annotate`` in                 |
+|                  | ``query_params`` to define the link that will be generated to filter results (pie charts are            |
+|                  | clickable and clicking on a portion of it will show the filtered results).                              |
++------------------+---------------------------------------------------------------------------------------------------------+
+| ``quick_link``   | An **optional** ``dict`` which contains configuration for the quick link button rendered                |
+|                  | below the chart.                                                                                        |
+|                  |                                                                                                         |
+|                  | **NOTE**: The chart legend is disabled if configuration for quick link button is provided.              |
+|                  |                                                                                                         |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | **Property**           | **Description**                                                           |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``url``                | (``str``) URL for the anchor tag                                          |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``label``              | (``str``) Label shown on the button                                       |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``title``              | (``str``) Title attribute of the button element                           |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``custom_css_classes`` | (``list``) List of CSS classes that'll be applied on the button           |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
++------------------+---------------------------------------------------------------------------------------------------------+
 
 Code example:
 
@@ -399,6 +430,12 @@ Code example:
                 'group_by': 'project__name',
             },
             'colors': {'Utils': 'red', 'User': 'orange'},
+            'quick_link': {
+                'url': '/admin/test_project/operator',
+                'label': 'Open Operators list',
+                'title': 'View complete list of operators',
+                'custom_css_classes': ['negative-top-20'],
+            },
         },
     )
 
@@ -865,6 +902,119 @@ inline object. Following is an example:
             'image_url': '/static/admin/img/icon-alert.svg'
         }
 
+``openwisp_utils.admin_theme.filters.InputFilter``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``admin_theme`` sub app of this package provides an input filter that can be used in changelist page
+to filter ``UUIDField`` or ``CharField``.
+
+Code example:
+
+.. code-block:: python
+
+    from django.contrib import admin
+    from openwisp_utils.admin_theme.filters import InputFilter
+    from my_app.models import MyModel
+
+    @admin.register(MyModel)
+    class MyModelAdmin(admin.ModelAdmin):
+        list_filter = [
+            ('my_field', InputFilter),
+            'other_field'
+            ...
+        ]
+
+By default ``InputFilter`` use exact lookup to filter items which matches to the value being
+searched by the user. But this behavior can be changed by modifying ``InputFilter`` as following:
+
+.. code-block:: python
+
+    from django.contrib import admin
+    from openwisp_utils.admin_theme.filters import InputFilter
+    from my_app.models import MyModel
+
+    class MyInputFilter(InputFilter):
+        lookup = 'icontains'
+
+
+    @admin.register(MyModel)
+    class MyModelAdmin(admin.ModelAdmin):
+        list_filter = [
+            ('my_field', MyInputFilter),
+            'other_field'
+            ...
+        ]
+
+To know about other lookups that can be used please check
+`Django Lookup API Reference <https://docs.djangoproject.com/en/3.2/ref/models/lookups/#django.db.models.Lookup>`__
+
+``openwisp_utils.admin_theme.filters.SimpleInputFilter``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A stripped down version of ``openwisp_utils.admin_theme.filters.InputFilter`` that provides
+flexibility to customize filtering. It can be used to filter objects using indirectly
+related fields.
+
+The derived filter class should define the ``queryset`` method as shown in following example:
+
+.. code-block:: python
+
+    from django.contrib import admin
+    from openwisp_utils.admin_theme.filters import SimpleInputFilter
+    from my_app.models import MyModel
+
+    class MyInputFilter(SimpleInputFilter):
+        parameter_name = 'shelf'
+        title = _('Shelf')
+
+        def queryset(self, request, queryset):
+            if self.value() is not None:
+                return queryset.filter(name__icontains=self.value())
+
+
+    @admin.register(MyModel)
+    class MyModelAdmin(admin.ModelAdmin):
+        list_filter = [
+            MyInputFilter,
+            'other_field'
+            ...
+        ]
+
+``openwisp_utils.admin_theme.filters.AutocompleteFilter``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``admin_theme`` sub app of this package provides an auto complete
+filter that uses django autocomplete widget to load filter data asynchronously.
+
+This filter can be helpful when the number of objects is too large
+to load all at once which may cause the slow loading of the page.
+
+.. code-block:: python
+
+    from django.contrib import admin
+    from openwisp_utils.admin_theme.filters import AutocompleteFilter
+    from my_app.models import MyModel, MyOtherModel
+
+    class MyAutoCompleteFilter(AutocompleteFilter):
+        field_name = 'field'
+        parameter_name = 'field_id'
+        title = _('My Field')
+
+    @admin.register(MyModel)
+    class MyModelAdmin(admin.ModelAdmin):
+        list_filter = [
+            MyAutoCompleteFilter,
+            ...
+        ]
+
+    @admin.register(MyOtherModel)
+    class MyOtherModelAdmin(admin.ModelAdmin):
+        search_fields = ['id']
+
+To customize or know more about it, please refer to the
+`django-admin-autocomplete-filter documentation
+<https://github.com/farhan0581/django-admin-autocomplete-filter#usage>`_.
+
 Code utilities
 --------------
 
@@ -919,13 +1069,36 @@ If you want to print a string in ``Red Bold``, you can do it as below.
 
 You may also provide the ``end`` arguement similar to built-in print method.
 
-
 ``openwisp_utils.utils.SorrtedOrderedDict``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Extends ``collections.SortedDict`` and implements logic to sort inserted
 items based on ``key`` value. Sorting is done at insert operation which
 incurs memory space overhead.
+
+``openwisp_utils.tasks.OpenwispCeleryTask``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A custom celery task class that sets hard and soft time limits of celery tasks
+using `OPENWISP_CELERY_HARD_TIME_LIMIT <#openwisp_celery_hard_time_limit>`_
+and `OPENWISP_CELERY_SOFT_TIME_LIMIT <#openwisp_celery_soft_time_limit>`_
+settings respectively.
+
+Usage:
+
+.. code-block:: python
+
+    from celery import shared_task
+
+    from openwisp_utils.tasks import OpenwispCeleryTask
+
+    @shared_task(base=OpenwispCeleryTask)
+    def your_celery_task():
+        pass
+
+**Note:** This task class should be used for regular background tasks
+but not for complex background tasks which can take a long time to execute
+(eg: firmware upgrades, network operations with retry mechanisms).
 
 Storage utilities
 -----------------
@@ -942,6 +1115,49 @@ To use point ``STATICFILES_STORAGE`` to ``openwisp_utils.storage.CompressStaticF
 .. code-block:: python
 
     STATICFILES_STORAGE = 'openwisp_utils.storage.CompressStaticFilesStorage'
+
+Admin Theme utilities
+---------------------
+
+``openwisp_utils.admin_theme.email.send_email``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This function allows sending email in both plain text and HTML version (using the template
+and logo that can be customised using `OPENWISP_EMAIL_TEMPLATE <#openwisp_email_template>`_
+and `OPENWISP_EMAIL_LOGO <#openwisp_email_logo>`_ respectively).
+
+In case the HTML version if not needed it may be disabled by
+setting `OPENWISP_HTML_EMAIL <#openwisp_html_email>`_ to ``False``.
+
+**Syntax:**
+
+.. code-block:: python
+
+    send_email(subject, body_text, body_html, recipients, **kwargs)
+
++--------------------+--------------------------------------------------------------------------------------------+
+| **Parameter**      | **Description**                                                                            |
++--------------------+--------------------------------------------------------------------------------------------+
+| ``subject``        | (``str``) The subject of the email template.                                               |
++--------------------+--------------------------------------------------------------------------------------------+
+| ``body_text``      | (``str``) The body of the text message to be emailed.                                      |
++--------------------+--------------------------------------------------------------------------------------------+
+| ``body_html``      | (``str``) The body of the html template to be emailed.                                     |
++--------------------+--------------------------------------------------------------------------------------------+
+| ``recipients``     | (``list``) The list of recipients to send the mail to.                                     |
++--------------------+--------------------------------------------------------------------------------------------+
+| ``extra_context``  | **optional** (``dict``) Extra context which is passed to the template.                     |
+|                    | The dictionary keys ``call_to_action_text`` and ``call_to_action_url``                     |
+|                    | can be passed to show a call to action button.                                             |
+|                    | Similarly, ``footer`` can be passed to add a footer.                                       |
++--------------------+--------------------------------------------------------------------------------------------+
+| ``**kwargs``       | Any additional keyword arguments (e.g. ``attachments``, ``headers``, etc.)                 |
+|                    | are passed directly to the `django.core.mail.EmailMultiAlternatives                        |
+|                    | <https://docs.djangoproject.com/en/4.1/topics/email/#sending-alternative-content-types>`_. |
++--------------------+--------------------------------------------------------------------------------------------+
+
+
+**Note**: Data passed in body should be validated and user supplied data should not be sent directly to the function.
 
 REST API utilities
 ------------------
@@ -1301,7 +1517,7 @@ Title shown to users in the index page of the admin site.
 ``OPENWISP_ADMIN_DASHBOARD_ENABLED``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**default**: ``False``
+**default**: ``True``
 
 When ``True``, enables the `OpenWISP Dashboard <#openwisp-dashboard>`_.
 Upon login, the user will be greeted with the dashboard instead of the default
@@ -1422,6 +1638,98 @@ Example usage:
         '*png',
     ]
 
+``OPENWISP_HTML_EMAIL``
+^^^^^^^^^^^^^^^^^^^^^^^
+
++---------+----------+
+| type    | ``bool`` |
++---------+----------+
+| default | ``True`` |
++---------+----------+
+
+If ``True``, an HTML themed version of the email can be sent using
+the `send_email <#openwisp_utilsadmin_themeemailsend_email>`_ function.
+
+``OPENWISP_EMAIL_TEMPLATE``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++---------+----------------------------------------+
+| type    | ``str``                                |
++---------+----------------------------------------+
+| default | ``openwisp_utils/email_template.html`` |
++---------+----------------------------------------+
+
+This setting allows to change the django template used for sending emails with
+the `send_email <#openwisp_utilsadmin_themeemailsend_email>`_ function.
+It is recommended to extend the default email template as in the example below.
+
+.. code-block:: django
+
+    {% extends 'openwisp_utils/email_template.html' %}
+    {% block styles %}
+    {{ block.super }}
+    <style>
+      .background {
+        height: 100%;
+        background: linear-gradient(to bottom, #8ccbbe 50%, #3797a4 50%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        padding: 50px;
+      }
+
+      .mail-header {
+        background-color: #3797a4;
+        color: white;
+      }
+    </style>
+    {% endblock styles %}
+
+Similarly, you can customize the HTML of the template by overriding the ``body`` block.
+See `email_template.html <https://github.com/openwisp/openwisp-utils/blob/
+master/openwisp_utils/admin_theme/templates/openwisp_utils/email_template.html>`_
+for reference implementation.
+
+``OPENWISP_EMAIL_LOGO``
+^^^^^^^^^^^^^^^^^^^^^^^
+
++---------+-------------------------------------------------------------------------------------+
+| type    | ``str``                                                                             |
++---------+-------------------------------------------------------------------------------------+
+| default | `OpenWISP logo <https://raw.githubusercontent.com/openwisp/openwisp-utils/master/ \ |
+|         | openwisp_utils/static/openwisp-utils/images/openwisp-logo.png>`_                    |
++---------+-------------------------------------------------------------------------------------+
+
+This setting allows to change the logo which is displayed in HTML version of the email.
+
+**Note**: Provide a URL which points to the logo on your own web server. Ensure that the URL provided is
+publicly accessible from the internet. Otherwise, the logo may not be displayed in the email.
+Please also note that SVG images do not get processed by some email clients
+like Gmail so it is recommended to use PNG images.
+
+``OPENWISP_CELERY_SOFT_TIME_LIMIT``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++---------+---------------------+
+| type    | ``int``             |
++---------+---------------------+
+| default | ``30`` (in seconds) |
++---------+---------------------+
+
+Sets the soft time limit for celery tasks using
+`OpenwispCeleryTask <#openwisp_utilstasksopenwispcelerytask>`_.
+
+``OPENWISP_CELERY_HARD_TIME_LIMIT``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++---------+----------------------+
+| type    | ``int``              |
++---------+----------------------+
+| default | ``120`` (in seconds) |
++---------+----------------------+
+
+Sets the hard time limit for celery tasks using
+`OpenwispCeleryTask <#openwisp_utilstasksopenwispcelerytask>`_.
+
 Installing for development
 --------------------------
 
@@ -1430,7 +1738,7 @@ Install the system dependencies:
 .. code-block:: shell
 
     sudo apt-get install sqlite3 libsqlite3-dev
-    
+
     # For running E2E Selenium tests
     sudo apt install chromium
 
@@ -1462,7 +1770,7 @@ Set up the pre-push hook to run tests and QA checks automatically right before t
 
 Install WebDriver for Chromium for your browser version from `<https://chromedriver.chromium.org/home>`_
 and Extract ``chromedriver`` to one of directories from your ``$PATH`` (example: ``~/.local/bin/``).
-    
+
 Create database:
 
 .. code-block:: shell
@@ -1505,3 +1813,10 @@ License
 -------
 
 See `LICENSE <https://github.com/openwisp/openwisp-utils/blob/master/LICENSE>`_.
+
+Attribution
+-----------
+
+`Wireless icon <https://github.com/openwisp/openwisp-utils/blob/master/openwisp_utils/admin_theme/static/ui/openwisp/images/monitoring-wifi.svg>`_
+is licensed by Gregbaker, under `CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0>`_ ,
+via `Wikimedia Commons <https://commons.wikimedia.org/wiki/File:Wireless-icon.svg>`_.

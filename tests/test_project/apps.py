@@ -1,4 +1,5 @@
 from django.db.models import Case, Count, Sum, When
+from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from openwisp_utils.admin_theme import (
     register_dashboard_chart,
@@ -44,6 +45,12 @@ class TestAppConfig(ApiAppConfig):
                 },
                 'colors': {'Utils': 'red', 'User': 'orange'},
                 'labels': {'Utils': _('Utils'), 'User': _('User')},
+                'quick_link': {
+                    'url': reverse_lazy('admin:test_project_operator_changelist'),
+                    'label': 'Open Operators list',
+                    'title': 'View complete list of operators',
+                    'custom_css_classes': ['negative-top-20'],
+                },
             },
         )
         register_dashboard_chart(
@@ -55,10 +62,20 @@ class TestAppConfig(ApiAppConfig):
                     'model': 'project',
                     'annotate': {
                         'with_operator': Count(
-                            Case(When(operator__isnull=False, then=1,))
+                            Case(
+                                When(
+                                    operator__isnull=False,
+                                    then=1,
+                                )
+                            )
                         ),
                         'without_operator': Count(
-                            Case(When(operator__isnull=True, then=1,))
+                            Case(
+                                When(
+                                    operator__isnull=True,
+                                    then=1,
+                                )
+                            )
                         ),
                     },
                     'aggregate': {
@@ -88,7 +105,14 @@ class TestAppConfig(ApiAppConfig):
                 'css': ('dashboard-test.css',),
                 'js': ('dashboard-test.js',),
             },
-            extra_config={'test_extra_config': 'dashboard-test.config'},
+            extra_config={'test_extra_config1': 'dashboard-test.config1'},
+        )
+        register_dashboard_template(
+            position=1,
+            config={
+                'template': 'dashboard_test.html',
+            },
+            extra_config={'test_extra_config2': 'dashboard-test.config2'},
         )
 
     def register_menu_groups(self):

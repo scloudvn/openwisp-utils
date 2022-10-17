@@ -1,13 +1,96 @@
 Changelog
 =========
 
-Version 0.8.0 [unreleased]
+Version 1.1.0 [unreleased]
 --------------------------
+
+WIP.
+
+Version 1.0.4 [2022-10-07]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- Fixed **importlib-metadata** dependency, pinned it to ``<5.0``.
+  The newer versions of **importlib-metadata** breaks openwisp-utils
+  on **Python 3.7**.
+
+Version 1.0.3 [2022-08-03]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- Fixed **django-fitler** dependency, pinned it to ``~=21.1``.
+  Earlier, it was installing the latest version of django-filter.
+
+Version 1.0.2 [2022-07-01]
+--------------------------
+
+Bugfixes
+~~~~~~~~
+
+- Fixed empty charts showing annotations from
+  the previous chart
+- Fixed dashboard template ``extra_config`` getting
+  over-written when multiple dashboard templates
+  are used
+- Fixed `empty dashboard charts not displaying total as "0"
+  <https://github.com/openwisp/openwisp-utils/issues/301>`_
+
+Version 1.0.1 [2022-04-07]
+--------------------------
+
+- Fixed ``ImportError`` in click dependency of black
+  (updated black dependency to ``black~=22.3.0``)
+- Fixed target link of pie charts which use group by queries
+
+Version 1.0.0 [2022-02-18]
+--------------------------
+
+Features
+~~~~~~~~
+
+- Added `customizable navigation menu <https://github.com/openwisp/openwisp-utils#main-navigation-menu>`_
+- Added `horizontal filters <https://github.com/openwisp/openwisp-utils#admin-filters>`_
+- Added `customizable admin dashboard <https://github.com/openwisp/openwisp-utils#openwisp-dashboard>`_
+- Added `send_email function <https://github.com/openwisp/openwisp-utils#openwisp_utilsadmin_themeemailsend_email>`_
+- Added `CompressStaticFilesStorage <https://github.com/openwisp/openwisp-utils#openwisp_utilsstoragecompressstaticfilesstorage>`_ -
+  a static storage backend for Django that also compresses static files
+- Added `AssertNumQueriesSubTestMixin <https://github.com/openwisp/openwisp-utils#openwisp_utilstestsassertnumqueriessubtestmixin>`_
+- Added `HelpTextStackedInline admin class <https://github.com/openwisp/openwisp-utils#openwisp_utilsadminhelptextstackedinline>`_
+- Added `OpenwispCeleryTask <https://github.com/openwisp/openwisp-utils#openwisp-utils-tasks-openwispcelerytask>`_ - a custom celery task class
+- Added support for linting CSS and JS in `openwisp-qa-check <https://github.com/openwisp/openwisp-utils#openwisp-qa-check>`_
+- Added support for formatting CSS and JS in `openwisp-qa-format <https://github.com/openwisp/openwisp-utils#openwisp-qa-format>`_
+- Added `git pre-push hook <https://github.com/openwisp/openwisp-utils/issues/161>`_
 
 Changes
 ~~~~~~~
 
-- Updated Django REST Framework to 3.12.x
+- `Updated OpenWISP's admin theme <https://medium.com/@niteshsinha1707/new-navigation-menu-and-ui-ux-improvements-project-report-a94c37514b7d>`__
+
+**Dependencies**:
+
+- Bumped ``django-model-utils~=4.2.0``
+- Bumped ``black<=21.10b0``
+- Bumped ``djangorestframework~=3.13.0``
+- Added ``swapper~=1.3.0``, ``django-compress-staticfiles~=1.0.1b`` and ``celery~=5.2.3``
+- Added support for Django ``3.2.x`` and ``4.0.x``
+- Added support for Python ``3.9``
+
+Bugfixes
+~~~~~~~~
+
+- Fixed `checkcommit` failing for `trailing period (.) after closing keyword <https://github.com/openwisp/openwisp-utils/issues/187>`_
+
+Version 0.7.5 [2021-06-01]
+--------------------------
+
+- [fix] Added workaround for minification of browsable API view.
+  Django-pipeline strips spaces from pre-formatted text on minifying HTML
+  which destroys the representation of data on browsable API views.
+  Added a workaround to restore presentation to original form using CSS.
 
 Version 0.7.4 [2021-04-08]
 --------------------------

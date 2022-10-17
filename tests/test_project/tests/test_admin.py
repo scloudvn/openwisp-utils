@@ -1,17 +1,19 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.urls import reverse
 from openwisp_utils.admin import ReadOnlyAdmin
 from openwisp_utils.admin_theme import settings as admin_theme_settings
-from openwisp_utils.admin_theme.apps import OpenWispAdminThemeConfig
+from openwisp_utils.admin_theme.apps import OpenWispAdminThemeConfig, _staticfy
 from openwisp_utils.admin_theme.checks import admin_theme_settings_checks
+from openwisp_utils.admin_theme.filters import InputFilter, SimpleInputFilter
 
-from ..admin import ProjectAdmin
-from ..models import Operator, Project, RadiusAccounting
+from ..admin import ProjectAdmin, ShelfAdmin
+from ..models import Operator, Project, RadiusAccounting, Shelf
 from . import AdminTestMixin, CreateMixin
 
 User = get_user_model()
@@ -154,6 +156,40 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
             response = self.client.get('/admin/login/')
             self.assertNotContains(response, 'id="nav"')
 
+    def test_menu_on_non_admin_page(self):
+        url = reverse('menu-test-view')
+        with self.subTest('Test menu visibility when user is a staff'):
+            user = User.objects.create(
+                username='tester',
+                password='pass',
+                email='email@email',
+                is_staff=True,
+                is_superuser=False,
+            )
+            self.client.force_login(user)
+            response = self.client.get(url)
+            self.assertContains(response, 'class="nav"')
+            self.assertContains(
+                response, '<strong>Does user has staff privileges?:</strong> True'
+            )
+            self.client.logout()
+
+        with self.subTest('Test menu visibility when user is not staff'):
+            # Test with non staff user
+            user = User.objects.create(
+                username='tester2',
+                password='pass',
+                email='email@email',
+                is_staff=False,
+                is_superuser=False,
+            )
+            self.client.force_login(user)
+            response = self.client.get(url)
+            self.assertNotContains(response, 'class="nav"')
+            self.assertContains(
+                response, '<strong>Does user has staff privileges?:</strong> False'
+            )
+
     def test_uuid_field_in_change(self):
         p = Project.objects.create(name='test-project')
         path = reverse('admin:test_project_project_change', args=[p.pk])
@@ -201,6 +237,10 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
             response, 'Only added operators will have permission to access the project.'
         )
         self.assertContains(response, 'https://github.com/openwisp/openwisp-utils/')
+        # Response should contain static in 'icon_url'
+        self.assertContains(
+            response, '<img src="/static/admin/img/icon-alert.svg">', html=True
+        )
 
     def test_admin_theme_css_setting(self):
         # test for improper configuration : not a list
@@ -245,6 +285,24 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
             response = self.client.get(reverse('admin:index'))
             self.assertContains(response, '/static/custom-admin-theme.css" media="all"')
 
+        # test if files are loaded with staticfiles
+        response = self.client.get(reverse('admin:index'))
+        self.assertContains(response, '/static/admin/css/openwisp.css" media="all"')
+        self.assertContains(response, '/static/menu-test.css" media="all"')
+        self.assertContains(response, 'href="/static/ui/openwisp/images/favicon.png"')
+        self.assertContains(response, '/static/dummy.js')
+
+    def test_admin_theme_static_backward_compatible(self):
+        # test for backward compatibility
+        with patch('openwisp_utils.admin_theme.apps.static', side_effect=ValueError):
+            self.assertEqual(
+                _staticfy('admin/css/openwisp.css'), 'admin/css/openwisp.css'
+            )
+        # test static files are loaded with staticfiles
+        self.assertEqual(
+            _staticfy('admin/css/openwisp.css'), '/static/admin/css/openwisp.css'
+        )
+
     def test_admin_theme_js_setting(self):
         # test for improper configuration : not a list
         with patch.object(
@@ -288,7 +346,7 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
             response = self.client.get(url)
             real_count = self._assert_contains(
                 response,
-                'class="ow-filter"',
+                'class="ow-filter',
                 status_code=response.status_code,
                 msg_prefix='',
                 html=False,
@@ -301,10 +359,56 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
             response = self.client.get(url)
             real_count = self._assert_contains(
                 response,
-                'class="ow-filter"',
+                'class="ow-filter',
                 status_code=response.status_code,
                 msg_prefix='',
                 html=False,
             )[1]
             self.assertGreater(real_count, 4)
             self.assertContains(response, 'id="ow-apply-filter"')
+
+    def test_simple_input_filter(self):
+        class TestFilter(SimpleInputFilter):
+            title = 'Test'
+            parameter_name = 'test'
+
+        filter = TestFilter(
+            request=None, params={}, model=Shelf, model_admin=ShelfAdmin
+        )
+        with self.assertRaises(NotImplementedError):
+            filter.queryset(None, None)
+
+    def test_input_filter(self):
+        with self.assertRaises(ImproperlyConfigured):
+            field = MagicMock()
+            field.target_field = True
+            InputFilter(
+                field,
+                request=None,
+                params={},
+                model=Shelf,
+                model_admin=ShelfAdmin,
+                field_path='mocked',
+            )
+        with self.assertRaises(ImproperlyConfigured):
+            InputFilter(
+                Shelf.created_at,
+                request=None,
+                params={},
+                model=Shelf,
+                model_admin=ShelfAdmin,
+                field_path='created_at',
+            )
+
+    def test_ow_auto_filter_view(self):
+        url = reverse('admin:ow-auto-filter')
+        user = User.objects.create(
+            username='operator',
+            password='pass',
+            email='email@email',
+            is_staff=True,
+            is_superuser=False,
+        )
+        self.client.force_login(user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)

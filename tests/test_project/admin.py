@@ -10,16 +10,38 @@ from openwisp_utils.admin import (
     TimeReadonlyAdminMixin,
     UUIDAdmin,
 )
+from openwisp_utils.admin_theme.filters import (
+    AutocompleteFilter,
+    InputFilter,
+    SimpleInputFilter,
+)
 
-from .models import Operator, Project, RadiusAccounting, Shelf
+from .models import Book, Operator, Project, RadiusAccounting, Shelf
 
 admin.site.unregister(User)
+
+
+class AutoShelfFilter(AutocompleteFilter):
+    title = _('shelf')
+    field_name = 'shelf'
+    parameter_name = 'shelf__id'
 
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ['username', 'is_staff', 'is_superuser', 'is_active']
-    list_filter = ['username', 'is_staff', 'is_superuser', 'is_active']
+    list_filter = [
+        ('username', InputFilter),
+        ('shelf', InputFilter),
+        'is_staff',
+        'is_superuser',
+        'is_active',
+    ]
+
+
+@admin.register(Book)
+class BookAdmin(admin.ModelAdmin):
+    list_filter = [AutoShelfFilter, 'name']
 
 
 @admin.register(Operator)
@@ -57,13 +79,23 @@ class ProjectAdmin(UUIDAdmin, ReceiveUrlAdmin):
     receive_url_name = 'receive_project'
 
 
+class ShelfFilter(SimpleInputFilter):
+    parameter_name = 'shelf'
+    title = _('Shelf')
+
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            return queryset.filter(name__icontains=self.value())
+
+
 @admin.register(Shelf)
 class ShelfAdmin(TimeReadonlyAdminMixin, admin.ModelAdmin):
     # DO NOT CHANGE: used for testing filters
     list_filter = [
-        'books_type',
-        'name',
+        ShelfFilter,
+        ['books_type', InputFilter],
+        ['id', InputFilter],
         'owner__username',
-        'owner__is_staff',
-        'owner__is_active',
+        'books_type',
     ]
+    search_fields = ['name']

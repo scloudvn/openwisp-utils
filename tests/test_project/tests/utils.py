@@ -1,8 +1,14 @@
 import json
 import os
+import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -21,6 +27,27 @@ class TestConfigMixin(object):
 
 
 class SeleniumTestMixin(TestConfigMixin):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        chrome_options = webdriver.ChromeOptions()
+        if getattr(settings, 'SELENIUM_HEADLESS', True):
+            chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--window-size=1366,768')
+        chrome_options.add_argument('--ignore-certificate-errors')
+        chrome_options.add_argument('--remote-debugging-port=9222')
+        capabilities = DesiredCapabilities.CHROME
+        capabilities['goog:loggingPrefs'] = {'browser': 'ALL'}
+        cls.web_driver = webdriver.Chrome(
+            options=chrome_options,
+            desired_capabilities=capabilities,
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.web_driver.quit()
+        super().tearDownClass()
+
     def open(self, url, driver=None):
         """
         Opens a URL
@@ -33,7 +60,7 @@ class SeleniumTestMixin(TestConfigMixin):
         driver.get(f'{self.live_server_url}{url}')
         WebDriverWait(self.web_driver, 2).until(
             EC.visibility_of_element_located(
-                (By.XPATH, self.config['main_content_xpath'])
+                (By.CSS_SELECTOR, self.config['main_content_css_selector'])
             )
         )
 
@@ -80,7 +107,7 @@ class SeleniumTestMixin(TestConfigMixin):
         if 'admin/login' in driver.current_url:
             driver.find_element_by_name('username').send_keys(username)
             driver.find_element_by_name('password').send_keys(password)
-            driver.find_element_by_xpath('//input[@type="submit"]').click()
+            driver.find_element_by_css_selector('input[type="submit"]').click()
 
     def logout(self):
         account_button = self._get_account_button()
@@ -104,8 +131,8 @@ class SeleniumTestMixin(TestConfigMixin):
         return self.web_driver.find_element_by_id('main-content')
 
     def _get_menu_home_item_label(self):
-        return self.web_driver.find_element_by_xpath(
-            '//span[@class="label" and contains(.,"Home")]'
+        return self.web_driver.find_element_by_css_selector(
+            'a.menu-item:nth-child(1) > span:nth-child(2)'
         )
 
     def _get_logo(self):
@@ -115,16 +142,14 @@ class SeleniumTestMixin(TestConfigMixin):
         return self.web_driver.find_element_by_id('container')
 
     def _get_test_mg_head(self):
-        return self.web_driver.find_element_by_xpath('//*[@class="nav"]/div[1]/div[1]')
+        return self.web_driver.find_element_by_css_selector('#mg-control-32')
 
     def _get_test_mg_icon(self):
-        return self.web_driver.find_element_by_xpath(
-            '//*[@class="nav"]/div[1]/div[1]/div[1]/span[1]'
-        )
+        return self.web_driver.find_element_by_css_selector('.auth')
 
     def _get_test_mg_label(self):
-        return self.web_driver.find_element_by_xpath(
-            '//*[@class="nav"]/div[1]/div[1]/div[1]/span[2]'
+        return self.web_driver.find_element_by_css_selector(
+            '#mg-control-32 > div:nth-child(1) > span:nth-child(2)'
         )
 
     def _get_active_mg(self):
@@ -134,11 +159,11 @@ class SeleniumTestMixin(TestConfigMixin):
         return self.web_driver.find_element_by_css_selector('.active-mg .mg-head')
 
     def _get_test_mg_dropdown(self):
-        return self.web_driver.find_element_by_xpath('//*[@class="nav"]/div[1]/div[2]')
+        return self.web_driver.find_element_by_css_selector('#mg-dropdown-32')
 
     def _get_test_mg_dropdown_label(self):
-        return self.web_driver.find_element_by_xpath(
-            '//*[@class="nav"]/div[1]/div[2]/div[1]'
+        return self.web_driver.find_element_by_css_selector(
+            '#mg-dropdown-32 > div:nth-child(1)'
         )
 
     def _get_account_button(self):
@@ -154,12 +179,18 @@ class SeleniumTestMixin(TestConfigMixin):
         return self.web_driver.find_element_by_css_selector('.account-menu-username')
 
     def _get_logout_link(self):
-        return self.web_driver.find_element_by_xpath(
-            '//a[@class="menu-link" and @href="/admin/logout/"]'
-        )
+        return self.web_driver.find_element_by_css_selector('.menu-link')
 
     def _get_menu_backdrop(self):
         return self.web_driver.find_element_by_css_selector('.menu-backdrop')
+
+    def _get_simple_input_filter(self):
+        return self.web_driver.find_element_by_css_selector('input[name=shelf]')
+
+    def _get_input_filter(self):
+        return self.web_driver.find_element_by_css_selector(
+            'input[name=books_type__exact]'
+        )
 
     def _open_menu(self):
         hamburger = self._get_hamburger()
@@ -183,3 +214,72 @@ class SeleniumTestMixin(TestConfigMixin):
                 is_menu_close = True
         if not is_menu_close:
             hamburger.click()
+
+    def _get_filter(self):
+        return self.web_driver.find_element_by_id('ow-changelist-filter')
+
+    def _get_filter_button(self):
+        return self.web_driver.find_element_by_id('ow-apply-filter')
+
+    def _get_clear_button(self):
+        return self.web_driver.find_element_by_id('changelist-filter-clear')
+
+    def check_exists_by_id(self, id):
+        try:
+            self.web_driver.find_element_by_id(id)
+        except NoSuchElementException:
+            return False
+        return True
+
+    def check_exists_by_xpath(self, xpath):
+        try:
+            self.web_driver.find_element_by_xpath(xpath)
+        except NoSuchElementException:
+            return False
+        return True
+
+    def check_exists_by_css_selector(self, selector):
+        try:
+            self.web_driver.find_element_by_css_selector(selector)
+        except NoSuchElementException:
+            return False
+        return True
+
+    def _get_filter_selected_option(self, filter_class):
+        return self.web_driver.find_element_by_css_selector(
+            f'.{filter_class} .selected-option'
+        )
+
+    def _get_filter_dropdown(self, filter_class):
+        return self.web_driver.find_element_by_css_selector(
+            f'.{filter_class} .filter-options'
+        )
+
+    def _get_filter_title(self, filter_class):
+        return self.web_driver.find_element_by_css_selector(
+            f'.{filter_class} .filter-title'
+        )
+
+    def _get_filter_anchor(self, query):
+        return self.web_driver.find_element_by_xpath(f'//a[@href="?{query}"]')
+
+    def wait_for_dropdown(self, filter_class):
+        WebDriverWait(self.web_driver, 2).until(
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, f'.{filter_class} .filter-options')
+            )
+        )
+
+
+class MockUser:
+    def __init__(self, is_superuser=False):
+        self.is_superuser = is_superuser
+        self.id = uuid.uuid4()
+
+
+class MockRequest:
+    def __init__(self, user=None):
+        if user:
+            self.user = user
+        else:
+            self.user = AnonymousUser()

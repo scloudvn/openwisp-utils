@@ -42,23 +42,28 @@ setup(
     scripts=['openwisp-qa-check', 'openwisp-qa-format', 'openwisp-pre-push-hook'],
     zip_safe=False,
     install_requires=[
-        'django-model-utils>=4.0.0,<4.1.0',
+        'django-model-utils~=4.2.0',
         'django-compress-staticfiles~=1.0.1b',
-        'swapper>=1.1.2,<1.3.0',
+        'django-admin-autocomplete-filter~=0.7.1',
+        'swapper~=1.3.0',
+        # TODO: Remove when dropping support for Python 3.7
+        # For info, read https://stackoverflow.com/questions/73929564/
+        'importlib-metadata<5.0',
     ],
     extras_require={
         'qa': [
-            'black<=19.10b0',
+            'black~=22.3.0',
             'flake8<=3.9',
             'isort~=5.0',
             'readme-renderer~=28.0',
             'coveralls~=3.0.0',  # depends on coverage as well
         ],
         'rest': [
-            'djangorestframework~=3.12.0',
-            'django-filter>=2.2.0<2.4.0',
+            'djangorestframework~=3.13.0',
+            'django-filter~=22.1',  # django-filter uses CalVer
             'drf-yasg~=1.20.0',
         ],
+        'celery': ['celery~=5.2.3'],
     },
     classifiers=[
         'Development Status :: 3 - Alpha',

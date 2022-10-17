@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from copy import deepcopy
 from unittest import TestCase as UnitTestCase
 from unittest.mock import patch
 
@@ -11,9 +12,11 @@ from openwisp_utils.admin_theme import (
     unregister_dashboard_chart,
     unregister_dashboard_template,
 )
+from openwisp_utils.admin_theme.dashboard import get_dashboard_context
 
 from ..models import Project
 from . import AdminTestMixin
+from .utils import MockRequest, MockUser
 
 
 class TestDashboardSchema(UnitTestCase):
@@ -46,6 +49,29 @@ class TestDashboardSchema(UnitTestCase):
         with self.subTest('Unregistering "Test Chart"'):
             unregister_dashboard_chart('Test Chart')
             self.assertNotIn(-1, DASHBOARD_CHARTS)
+
+        with self.subTest('Invalid "quick_link" config'):
+            invalid_config = deepcopy(dashboard_element)
+            invalid_config['quick_link'] = {'register': True}
+            with self.assertRaises(AssertionError) as context:
+                register_dashboard_chart(-2, invalid_config)
+            self.assertEqual(
+                str(context.exception), 'url must be defined when using quick_link'
+            )
+            invalid_config['quick_link']['url'] = '/'
+            with self.assertRaises(AssertionError) as context:
+                register_dashboard_chart(-2, invalid_config)
+            self.assertEqual(
+                str(context.exception), 'label must be defined when using quick_link'
+            )
+            invalid_config['quick_link']['label'] = 'index'
+            invalid_config['quick_link']['custom_css_classes'] = 'custom'
+            with self.assertRaises(AssertionError) as context:
+                register_dashboard_chart(-2, invalid_config)
+            self.assertEqual(
+                str(context.exception),
+                'custom_css_classes must be either a list or a tuple',
+            )
 
     def test_miscellaneous_DASHBOARD_CHARTS_validation(self):
         with self.subTest('Registering with incomplete config'):
@@ -126,6 +152,30 @@ class TestDashboardSchema(UnitTestCase):
             with self.assertRaises(ImproperlyConfigured):
                 register_dashboard_template(1, dashboard_element, 'test')
 
+    @patch('openwisp_utils.admin_theme.dashboard.DASHBOARD_TEMPLATES', OrderedDict())
+    @patch('openwisp_utils.admin_theme.dashboard.DASHBOARD_CHARTS', OrderedDict())
+    def test_dashboard_after_charts(self):
+        register_dashboard_template(
+            position=0,
+            config={'template': 'password_change_done.html'},
+            after_charts=False,
+        )
+        register_dashboard_template(
+            position=1,
+            config={'template': 'password_change_redirect.html'},
+            after_charts=True,
+        )
+        mocked_user = MockUser(is_superuser=True)
+        mocked_request = MockRequest(user=mocked_user)
+        context = get_dashboard_context(mocked_request)
+        self.assertEqual(
+            context['dashboard_templates_before_charts'], ['password_change_done.html']
+        )
+        self.assertEqual(
+            context['dashboard_templates_after_charts'],
+            ['password_change_redirect.html'],
+        )
+
 
 class TestAdminDashboard(AdminTestMixin, DjangoTestCase):
     def test_index_content(self):
@@ -135,15 +185,26 @@ class TestAdminDashboard(AdminTestMixin, DjangoTestCase):
         self.assertContains(response, '\'labels\': [\'User\', \'Utils\']')
         self.assertContains(response, '\'colors\': [\'orange\', \'red\']')
         self.assertContains(
+            response,
+            (
+                '\'quick_link\': {\'url\': \'/admin/test_project/operator/\','
+                ' \'label\': \'Open Operators list\', \'title\':'
+                ' \'View complete list of operators\', \'custom_css_classes\':'
+                ' [\'negative-top-20\']'
+            ),
+        )
+        self.assertContains(
             response, '<div style="display:none">Testing dashboard</div>'
         )
         self.assertContains(response, 'dashboard-test.js')
         self.assertContains(response, 'dashboard-test.css')
-        self.assertContains(response, 'dashboard-test.config')
+        self.assertContains(response, 'dashboard-test.config1')
+        self.assertContains(response, 'dashboard-test.config2')
         self.assertContains(response, 'jquery.init.js')
         self.assertContains(response, 'Operator presence in projects')
         self.assertContains(response, 'with_operator')
         self.assertContains(response, 'without_operator')
+        self.assertContains(response, 'project__name__exact')
 
         with self.subTest('Test no data'):
             Project.objects.all().delete()

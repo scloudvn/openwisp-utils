@@ -12,6 +12,7 @@ DASHBOARD_TEMPLATES = SortedOrderedDict()
 
 def _validate_chart_config(config):
     query_params = config.get('query_params', None)
+    quick_link = config.get('quick_link', None)
 
     assert query_params is not None
     assert 'name' in config
@@ -21,6 +22,13 @@ def _validate_chart_config(config):
     assert not ('group_by' in query_params and 'annotate' in query_params)
     if 'annotate' in query_params:
         assert 'filters' in config, 'filters must be defined when using annotate'
+    if quick_link:
+        assert 'url' in quick_link, 'url must be defined when using quick_link'
+        assert 'label' in quick_link, 'label must be defined when using quick_link'
+        if 'custom_css_classes' in quick_link:
+            assert isinstance(quick_link['custom_css_classes'], list) or isinstance(
+                quick_link['custom_css_classes'], tuple
+            ), 'custom_css_classes must be either a list or a tuple'
     return config
 
 
@@ -66,7 +74,9 @@ def _validate_template_config(config):
     return config
 
 
-def register_dashboard_template(position, config, extra_config=None):
+def register_dashboard_template(
+    position, config, extra_config=None, after_charts=False
+):
     """
     Registers a dashboard template
     register_dashboard_template(int, dict)
@@ -91,7 +101,9 @@ def register_dashboard_template(position, config, extra_config=None):
             f'{DASHBOARD_TEMPLATES[position][0]["template"]}'
         )
     validated_config = _validate_template_config(config)
-    DASHBOARD_TEMPLATES.update({position: [validated_config, extra_config]})
+    DASHBOARD_TEMPLATES.update(
+        {position: [validated_config, extra_config, after_charts]}
+    )
 
 
 def unregister_dashboard_template(path):
@@ -126,6 +138,8 @@ def get_dashboard_context(request):
         group_by = query_params.get('group_by')
         annotate = query_params.get('annotate')
         aggregate = query_params.get('aggregate')
+        org_field = query_params.get('organization_field')
+        default_org_field = 'organization_id'
         labels_i18n = value.get('labels')
 
         try:
@@ -139,8 +153,11 @@ def get_dashboard_context(request):
         qs = model.objects.all()
 
         # Filter query according to organization of user
-        if hasattr(model, 'organization_id') and not request.user.is_superuser:
-            qs = qs.filter(organization_id__in=request.user.organizations_managed)
+        if not request.user.is_superuser and (
+            org_field or hasattr(model, default_org_field)
+        ):
+            org_field = org_field or default_org_field
+            qs = qs.filter(**{f'{org_field}__in': request.user.organizations_managed})
 
         annotate_kwargs = {}
         if group_by:
@@ -184,7 +201,9 @@ def get_dashboard_context(request):
                 if value.get('colors') and qs_key in value['colors']:
                     colors.append(value['colors'][qs_key])
                 values.append(obj['count'])
-            value['target_link'] = f'/admin/{app_label}/{model_name}/?{group_by}='
+            value[
+                'target_link'
+            ] = f'/admin/{app_label}/{model_name}/?{group_by}__exact='
 
         if aggregate:
             for qs_key, qs_value in qs.items():
@@ -204,22 +223,27 @@ def get_dashboard_context(request):
 
     # dashboard templates
     extra_config = {}
-    templates = []
+    templates_before_charts = []
+    templates_after_charts = []
     css = []
     js = []
     for _, template_config in DASHBOARD_TEMPLATES.items():
-        templates.append(template_config[0]['template'])
+        if template_config[2]:
+            templates_after_charts.append(template_config[0]['template'])
+        else:
+            templates_before_charts.append(template_config[0]['template'])
         if 'css' in template_config[0]:
             css += list(template_config[0]['css'])
         if 'js' in template_config[0]:
             js += list(template_config[0]['js'])
         if template_config[1]:
-            extra_config = template_config[1]
+            extra_config.update(template_config[1])
 
     context.update(
         {
             'dashboard_charts': dict(config),
-            'dashboard_templates': templates,
+            'dashboard_templates_before_charts': templates_before_charts,
+            'dashboard_templates_after_charts': templates_after_charts,
             'dashboard_css': css,
             'dashboard_js': js,
         }
