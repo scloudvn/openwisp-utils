@@ -37,11 +37,13 @@ class UserAdmin(admin.ModelAdmin):
         'is_superuser',
         'is_active',
     ]
+    search_fields = ('username',)
 
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     list_filter = [AutoShelfFilter, 'name']
+    search_fields = ['name']
 
 
 @admin.register(Operator)
@@ -88,6 +90,18 @@ class ShelfFilter(SimpleInputFilter):
             return queryset.filter(name__icontains=self.value())
 
 
+class ReverseBookFilter(AutocompleteFilter):
+    title = _('Book')
+    field_name = 'book'
+    parameter_name = 'book'
+
+
+class AutoOwnerFilter(AutocompleteFilter):
+    title = _('owner')
+    field_name = 'owner'
+    parameter_name = 'owner_id'
+
+
 @admin.register(Shelf)
 class ShelfAdmin(TimeReadonlyAdminMixin, admin.ModelAdmin):
     # DO NOT CHANGE: used for testing filters
@@ -95,7 +109,8 @@ class ShelfAdmin(TimeReadonlyAdminMixin, admin.ModelAdmin):
         ShelfFilter,
         ['books_type', InputFilter],
         ['id', InputFilter],
-        'owner__username',
+        AutoOwnerFilter,
         'books_type',
+        ReverseBookFilter,
     ]
     search_fields = ['name']

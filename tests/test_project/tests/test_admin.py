@@ -270,9 +270,14 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
                 str(admin_theme_settings_checks(OpenWispAdminThemeConfig)[0]),
             )
         # test with desired configuration
-        with patch.object(
-            admin_theme_settings,
-            'OPENWISP_ADMIN_THEME_LINKS',
+        # Here openwisp_utils.admin_theme.theme.THEME_LINKS has been
+        # mocked instead of app_settings.OPENWISP_ADMIN_THEME_LINKS
+        # because openwisp_utils.admin_theme.theme.THEME_LINKS creates
+        # a copy of app_settings.OPENWISP_ADMIN_THEME_LINKS at project
+        # startup. Therefore, mocking app_settings.OPENWISP_ADMIN_THEME_LINKS
+        # will have no effect here.
+        with patch(
+            'openwisp_utils.admin_theme.theme.THEME_LINKS',
             [
                 {
                     'href': '/static/custom-admin-theme.css',
@@ -319,9 +324,14 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
                 str(admin_theme_settings_checks(OpenWispAdminThemeConfig)[0]),
             )
         # test with desired configuration
-        with patch.object(
-            admin_theme_settings,
-            'OPENWISP_ADMIN_THEME_JS',
+        # Here openwisp_utils.admin_theme.theme.THEME_JS has been
+        # mocked instead of app_settings.OPENWISP_ADMIN_THEME_JS
+        # because openwisp_utils.admin_theme.theme.THEME_JS creates
+        # a copy of app_settings.OPENWISP_ADMIN_THEME_JS at project
+        # startup. Therefore, mocking app_settings.OPENWISP_ADMIN_THEME_JS
+        # will have no effect here.
+        with patch(
+            'openwisp_utils.admin_theme.theme.THEME_JS',
             ['/static/openwisp-utils/js/uuid.js'],
         ):
             response = self.client.get(reverse('admin:index'))
@@ -354,7 +364,7 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
             self.assertLessEqual(real_count, 4)
             self.assertNotContains(response, 'id="ow-apply-filter"')
 
-        with self.subTest('Test when number of filters is greater than 4'):
+        with self.subTest('Test when number of filters is greater than 5'):
             url = reverse('admin:test_project_shelf_changelist')
             response = self.client.get(url)
             real_count = self._assert_contains(
@@ -364,7 +374,7 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
                 msg_prefix='',
                 html=False,
             )[1]
-            self.assertGreater(real_count, 4)
+            self.assertGreater(real_count, 5)
             self.assertContains(response, 'id="ow-apply-filter"')
 
     def test_simple_input_filter(self):
@@ -402,6 +412,7 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
 
     def test_ow_auto_filter_view(self):
         url = reverse('admin:ow-auto-filter')
+        url = f'{url}?app_label=test_project&model_name=shelf&field_name=book'
         user = User.objects.create(
             username='operator',
             password='pass',
@@ -412,3 +423,9 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
         self.client.force_login(user)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
+
+    def test_ow_auto_filter_view_reverse_relation(self):
+        url = reverse('admin:ow-auto-filter')
+        url = f'{url}?app_label=test_project&model_name=shelf&field_name=book'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
