@@ -708,7 +708,7 @@ input[type='button']:hover,
   margin-left: 2.5rem;
   width: 150px;
   height: 86px;
-  background: url(../../../static/ui/openwisp/images/favicon.svg)
+  background: url(../../../static/ui/openwisp/images/Big-Logo-01.png)
   no-repeat scroll 0 50%/100%;
 }
 
@@ -1122,14 +1122,15 @@ a.menu-item,
 h1#site-name {
   margin: 0;
   padding: 0.5rem 0px;
-  background: #00134d;
+  background: #eeeee4;
 }
 #site-name a {
+  padding-top: 15px;
   display: block;
   width: 165px;
   height: 95px;
   margin: auto;
-  background: url(../../../static/ui/openwisp/images/favicon.svg)
+  background: url(../../../static/ui/openwisp/images/Big-Logo-01.png)
   no-repeat scroll 0 50%/100%;
   text-indent: -2000px;
 }
@@ -1344,7 +1345,7 @@ h1#site-name {
   #site-name a {
     width: 2.5rem;
     height: 2.5rem;
-    background: url(../../../static/ui/openwisp/images/favicon.svg)
+    background: url(../../../static/ui/openwisp/images/Big-Logo-01.png)
     no-repeat center;
   }
   .hamburger {
@@ -1414,7 +1415,8 @@ body.login {
   display: block;
 }
 .login #site-name a {
-  background: url(../../../static/ui/openwisp/images/favicon.svg)
+  padding-top: 20px;
+  background: url(../../../static/ui/openwisp/images/Big-Logo-01.png)
   no-repeat scroll 0 50%/100%;
   text-indent: -2000px;
   width: 150px;
