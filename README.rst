@@ -461,6 +461,8 @@ Following properties can be configured for each chart ``config``:
 |                  | +------------------------+---------------------------------------------------------------------------+  |
 |                  | | ``aggregate``          | Alternative to ``group_by``, ``dict`` used for more complex queries.      |  |
 |                  | +------------------------+---------------------------------------------------------------------------+  |
+|                  | | ``filter``             | ``dict`` used for filtering queryset.                                     |  |
+|                  | +------------------------+---------------------------------------------------------------------------+  |
 |                  | | ``organization_field`` | (``str``) If the model does not have a direct relation with the           |  |
 |                  | |                        | ``Organization`` model, then indirect relation can be specified using     |  |
 |                  | |                        | this property. E.g.: ``device__organization_id``.                         |  |
@@ -476,6 +478,11 @@ Following properties can be configured for each chart ``config``:
 | ``filters``      | An **optional** ``dict`` which can be used when using ``aggregate`` and ``annotate`` in                 |
 |                  | ``query_params`` to define the link that will be generated to filter results (pie charts are            |
 |                  | clickable and clicking on a portion of it will show the filtered results).                              |
++------------------+---------------------------------------------------------------------------------------------------------+
+| ``main_filters`` | An **optional** ``dict`` which can be used to add additional filtering on the target link.              |
++------------------+---------------------------------------------------------------------------------------------------------+
+| ``filtering``    | An **optional** ``str`` which can be set to ``'False'`` (str) to disable filtering on target links.     |
+|                  | This is useful when clicking on any section of the chart should take user to the same URL.              |
 +------------------+---------------------------------------------------------------------------------------------------------+
 | ``quick_link``   | An **optional** ``dict`` which contains configuration for the quick link button rendered                |
 |                  | below the chart.                                                                                        |
@@ -852,7 +859,7 @@ Example:
 
 .. code-block:: css
 
-    .icon-class-name:{
+    .icon-class-name {
         mask-image: url(imageurl);
         -webkit-mask-image: url(imageurl);
     }
@@ -897,10 +904,159 @@ Model class inheriting ``UUIDModel`` which provides two additional fields:
 Which use respectively ``AutoCreatedField``, ``AutoLastModifiedField`` from ``model_utils.fields``
 (self-updating fields providing the creation date-time and the last modified date-time).
 
-``openwisp_utils.base.KeyField``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``openwisp_utils.base.FallBackModelMixin``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A model field whic provides a random key or token, widely used across openwisp modules.
+Model mixin that implements ``get_field_value`` method which can be used
+to get value of fallback fields.
+
+Custom Fields
+-------------
+
+This section describes custom fields defined in ``openwisp_utils.fields``
+that can be used in Django models:
+
+``openwisp_utils.fields.KeyField``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A model field which provides a random key or token, widely used across openwisp modules.
+
+``openwisp_utils.fields.FallbackBooleanChoiceField``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This field extends Django's `BooleanField <https://docs.djangoproject.com/en/4.2/ref/models/fields/#booleanfield>`_
+and provides additional functionality for handling choices with a fallback value.
+The field will use the **fallback value** whenever the field is set to ``None``.
+
+This field is particularly useful when you want to present a choice between enabled
+and disabled options, with an additional "Default" option that reflects the fallback value.
+
+.. code-block:: python
+
+    from django.db import models
+    from openwisp_utils.fields import FallbackBooleanChoiceField
+    from myapp import settings as app_settings
+
+    class MyModel(models.Model):
+        is_active = FallbackBooleanChoiceField(
+            null=True,
+            blank=True,
+            default=None,
+            fallback=app_settings.IS_ACTIVE_FALLBACK,
+        )
+
+``openwisp_utils.fields.FallbackCharChoiceField``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This field extends Django's `CharField <https://docs.djangoproject.com/en/4.2/ref/models/fields/#charfield>`_
+and provides additional functionality for handling choices with a fallback value.
+The field will use the **fallback value** whenever the field is set to ``None``.
+
+.. code-block:: python
+
+    from django.db import models
+    from openwisp_utils.fields import FallbackCharChoiceField
+    from myapp import settings as app_settings
+
+    class MyModel(models.Model):
+        is_first_name_required = FallbackCharChoiceField(
+            null=True,
+            blank=True,
+            max_length=32,
+            choices=(
+                ('disabled', _('Disabled')),
+                ('allowed', _('Allowed')),
+                ('mandatory', _('Mandatory')),
+            ),
+            fallback=app_settings.IS_FIRST_NAME_REQUIRED,
+        )
+
+``openwisp_utils.fields.FallbackCharField``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This field extends Django's `CharField <https://docs.djangoproject.com/en/4.2/ref/models/fields/#charfield>`_
+and provides additional functionality for handling text fields with a fallback value.
+
+It allows populating the form with the fallback value when the actual value is set to ``null`` in the database.
+
+.. code-block:: python
+
+    from django.db import models
+    from openwisp_utils.fields import FallbackCharField
+    from myapp import settings as app_settings
+
+    class MyModel(models.Model):
+        greeting_text = FallbackCharField(
+            null=True,
+            blank=True,
+            max_length=200,
+            fallback=app_settings.GREETING_TEXT,
+        )
+
+``openwisp_utils.fields.FallbackURLField``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This field extends Django's `URLField <https://docs.djangoproject.com/en/4.2/ref/models/fields/#urlfield>`_
+and provides additional functionality for handling URL fields with a fallback value.
+
+It allows populating the form with the fallback value when the actual value is set to ``null`` in the database.
+
+.. code-block:: python
+
+    from django.db import models
+    from openwisp_utils.fields import FallbackURLField
+    from myapp import settings as app_settings
+
+    class MyModel(models.Model):
+        password_reset_url = FallbackURLField(
+            null=True,
+            blank=True,
+            max_length=200,
+            fallback=app_settings.DEFAULT_PASSWORD_RESET_URL,
+        )
+
+``openwisp_utils.fields.FallbackTextField``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This extends Django's `TextField <https://docs.djangoproject.com/en/4.2/ref/models/fields/#django.db.models.TextField>`_
+and provides additional functionality for handling text fields with a fallback value.
+
+It allows populating the form with the fallback value when the actual value is set to ``null`` in the database.
+
+.. code-block:: python
+
+    from django.db import models
+    from openwisp_utils.fields import FallbackTextField
+    from myapp import settings as app_settings
+
+    class MyModel(models.Model):
+        extra_config = FallbackTextField(
+            null=True,
+            blank=True,
+            max_length=200,
+            fallback=app_settings.EXTRA_CONFIG,
+        )
+
+``openwisp_utils.fields.FallbackPositiveIntegerField``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This extends Django's `PositiveIntegerField <https://docs.djangoproject.com/en/4.2/ref/models/fields/#positiveintegerfield>`_
+and provides additional functionality for handling positive integer fields with a fallback value.
+
+It allows populating the form with the fallback value when the actual value is set to ``null`` in the database.
+
+.. code-block:: python
+
+    from django.db import models
+    from openwisp_utils.fields import FallbackPositiveIntegerField
+    from myapp import settings as app_settings
+
+    class MyModel(models.Model):
+        count = FallbackPositiveIntegerField(
+            blank=True,
+            null=True,
+            fallback=app_settings.DEFAULT_COUNT,
+        )
 
 Admin utilities
 ---------------
@@ -937,11 +1093,21 @@ is created even if the default values are unchanged.
 Without this, when creating new objects, inline items won't be saved
 unless users change the default values.
 
+``openwisp_utils.admin.CopyableFieldsAdmin``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An admin class that allows to set admin fields to be
+read-only and makes it easy to copy the fields contents.
+
+Useful for auto-generated fields such as UUIDs, secret keys, tokens, etc.
+
 ``openwisp_utils.admin.UUIDAdmin``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An admin class that provides the UUID of the object as a read-only input field
-(to make it easy and quick to copy/paste).
+This class is a subclass of ``CopyableFieldsAdmin`` which
+sets ``uuid`` as the only copyable field. This class is kept
+for backward compatibility and convenience, since different models
+of various OpenWISP modules show ``uuid`` as the only copyable field.
 
 ``openwisp_utils.admin.ReceiveUrlAdmin``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1433,6 +1599,22 @@ Example usage:
             # the assertion above will fail but this line will be executed
             print('This will be printed anyway.')
 
+``openwisp_utils.test_selenium_mixins.SeleniumTestMixin``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This mixin provides basic setup for Selenium tests with method to
+open URL and login and logout a user.
+
+Database backends
+-----------------
+
+``openwisp_utils.db.backends.spatialite``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This backend extends ``django.contrib.gis.db.backends.spatialite``
+database backend to implement a workaround for handling
+`issue with sqlite 3.36 and spatialite 5 <https://code.djangoproject.com/ticket/32935>`_.
+
 Quality Assurance Checks
 ------------------------
 
@@ -1909,6 +2091,9 @@ See `LICENSE <https://github.com/openwisp/openwisp-utils/blob/master/LICENSE>`_.
 Attribution
 -----------
 
-`Wireless icon <https://github.com/openwisp/openwisp-utils/blob/master/openwisp_utils/admin_theme/static/ui/openwisp/images/monitoring-wifi.svg>`_
-is licensed by Gregbaker, under `CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0>`_ ,
-via `Wikimedia Commons <https://commons.wikimedia.org/wiki/File:Wireless-icon.svg>`_.
+- `Wireless icon <https://github.com/openwisp/openwisp-utils/blob/master/openwisp_utils/admin_theme/static/ui/openwisp/images/monitoring-wifi.svg>`_
+  is licensed by Gregbaker, under `CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0>`_ ,
+  via `Wikimedia Commons <https://commons.wikimedia.org/wiki/File:Wireless-icon.svg>`_.
+- `Roboto webfont <https://www.google.com/fonts/specimen/Roboto>`_ is licensed
+  under the `Apache License, Version 2.0 <https://www.apache.org/licenses/LICENSE-2.0>`_.
+  WOFF files extracted using `<https://github.com/majodev/google-webfonts-helper>`_.

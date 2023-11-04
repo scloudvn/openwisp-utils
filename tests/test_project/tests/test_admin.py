@@ -6,14 +6,20 @@ from django.contrib.auth.models import Permission
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.urls import reverse
-from openwisp_utils.admin import ReadOnlyAdmin
+from openwisp_utils.admin import CopyableFieldError, CopyableFieldsAdmin, ReadOnlyAdmin
 from openwisp_utils.admin_theme import settings as admin_theme_settings
 from openwisp_utils.admin_theme.apps import OpenWispAdminThemeConfig, _staticfy
 from openwisp_utils.admin_theme.checks import admin_theme_settings_checks
 from openwisp_utils.admin_theme.filters import InputFilter, SimpleInputFilter
 
 from ..admin import ProjectAdmin, ShelfAdmin
-from ..models import Operator, Project, RadiusAccounting, Shelf
+from ..models import (
+    Operator,
+    OrganizationRadiusSettings,
+    Project,
+    RadiusAccounting,
+    Shelf,
+)
 from . import AdminTestMixin, CreateMixin
 
 User = get_user_model()
@@ -22,6 +28,7 @@ User = get_user_model()
 class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
     TEST_KEY = 'w1gwJxKaHcamUw62TQIPgYchwLKn3AA0'
     accounting_model = RadiusAccounting
+    org_radius_settings_model = OrganizationRadiusSettings
 
     def test_radiusaccounting_change(self):
         options = dict(username='bobby', session_id='1')
@@ -97,14 +104,20 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
             exclude = ['id']
 
         modeladmin = TestReadOnlyAdmin(RadiusAccounting, AdminSite)
-        self.assertEqual(modeladmin.readonly_fields, ['session_id', 'username'])
+        self.assertEqual(
+            modeladmin.readonly_fields,
+            ['session_id', 'username', 'start_time', 'stop_time'],
+        )
 
     def test_readonlyadmin_fields(self):
         class TestReadOnlyAdmin(ReadOnlyAdmin):
             pass
 
         modeladmin = TestReadOnlyAdmin(RadiusAccounting, AdminSite)
-        self.assertEqual(modeladmin.readonly_fields, ['id', 'session_id', 'username'])
+        self.assertEqual(
+            modeladmin.readonly_fields,
+            ['id', 'session_id', 'username', 'start_time', 'stop_time'],
+        )
 
     def test_context_processor(self):
         url = reverse('admin:index')
@@ -203,6 +216,48 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'field-uuid')
         self.assertContains(response, 'field-receive_url')
+
+    def test_copyablefields_admin(self):
+        class TestCopyableFieldAdmin(CopyableFieldsAdmin):
+            copyable_fields = ('session_id', 'username')
+
+        options = dict(username='bobby', session_id='1')
+        radius_acc = self._create_radius_accounting(**options)
+        ma = TestCopyableFieldAdmin(RadiusAccounting, AdminSite)
+        path = reverse(
+            'admin:test_project_radiusaccounting_change', args=[radius_acc.pk]
+        )
+        self.assertEqual(
+            ma.get_readonly_fields(self.client.request, radius_acc),
+            TestCopyableFieldAdmin.copyable_fields,
+        )
+        response = self.client.get(path)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'field-username')
+        self.assertContains(response, 'field-session_id')
+
+    def test_invalid_copyablefields_admin_error(self):
+        class TestCopyableFieldAdmin(CopyableFieldsAdmin):
+            pass
+
+        ma = TestCopyableFieldAdmin(Project, AdminSite)
+        ma.copyable_fields = ('invalid_field',)
+        copyable_field_err = "('invalid_field',) not in TestCopyableFieldAdmin.fields"
+        with self.assertRaises(CopyableFieldError) as err:
+            ma.get_fields(self.client.request)
+        self.assertIn(copyable_field_err, err.exception.args[0])
+
+    def test_copyablefields_admin_fields_order(self):
+        path = reverse('admin:test_project_project_add')
+        self.client.get(path)
+        ma = ProjectAdmin(Project, self.site)
+        # 'uuid' should be missing from ma.get_fields()
+        # because we're testing the project admin add form,
+        # and now we're adding it here again only to assert the admin field order
+        self.assertEqual(ma.fields, ('uuid', *ma.get_fields(self.client.request)))
+        self.assertEqual(
+            ma.readonly_fields, ma.get_readonly_fields(self.client.request)
+        )
 
     def test_receive_url_admin(self):
         p = Project.objects.create(name='test_receive_url_admin_project')
@@ -429,3 +484,88 @@ class TestAdmin(AdminTestMixin, CreateMixin, TestCase):
         url = f'{url}?app_label=test_project&model_name=shelf&field_name=book'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+
+    def test_ow_autocomplete_filter_uuid_exception(self):
+        url = reverse('admin:test_project_book_changelist')
+        url = f'{url}?shelf__id=invalid'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '“invalid” is not a valid UUID.')
+
+    def test_organization_radius_settings_admin(self):
+        org_rad_settings = self._create_org_radius_settings(
+            is_active=True,
+            is_first_name_required=None,
+            greeting_text=None,
+            password_reset_url='http://localhost:8000/reset-password/',
+        )
+        url = reverse(
+            'admin:test_project_organizationradiussettings_change',
+            args=[org_rad_settings.pk],
+        )
+
+        with self.subTest('Test default values are rendered'):
+            response = self.client.get(url)
+            # Overridden value is selected for BooleanChoiceField
+            self.assertContains(
+                response,
+                '<select name="is_active" id="id_is_active">'
+                '<option value="">Default (Disabled)</option>'
+                '<option value="True" selected>Enabled</option>'
+                '<option value="False">Disabled</option></select>',
+                html=True,
+            )
+            # Default value is selected for FallbackCharChoiceField
+            self.assertContains(
+                response,
+                '<select name="is_first_name_required" id="id_is_first_name_required">'
+                '<option value="" selected>Default (Disabled)</option>'
+                '<option value="disabled">Disabled</option>'
+                '<option value="allowed">Allowed</option>'
+                '<option value="mandatory">Mandatory</option></select>',
+                html=True,
+            )
+            # Default value is used for FallbackCharField
+            self.assertContains(
+                response,
+                '<input type="text" name="greeting_text" value="Welcome to OpenWISP!"'
+                ' class="vTextField" maxlength="200" id="id_greeting_text">',
+            )
+            # Overridden value is used for the FallbackURLField
+            self.assertContains(
+                response,
+                '<input type="url" name="password_reset_url"'
+                ' value="http://localhost:8000/reset-password/"'
+                ' class="vURLField" maxlength="200" id="id_password_reset_url">',
+            )
+
+        with self.subTest('Test overriding default values from admin'):
+            payload = {
+                # Setting the default value for FallbackBooleanChoiceField
+                'is_active': '',
+                # Overriding the default value for FallbackCharChoiceField
+                'is_first_name_required': 'allowed',
+                # Overriding the default value for FallbackCharField
+                'greeting_text': 'Greeting text',
+                # Setting the default value for FallbackURLField
+                'password_reset_url': '',
+                # Setting the default value for FallbackTextField
+                'extra_config': '',
+            }
+            response = self.client.post(url, payload, follow=True)
+            self.assertEqual(response.status_code, 200)
+            org_rad_settings.refresh_from_db()
+            self.assertEqual(org_rad_settings.get_field_value('is_active'), False)
+            self.assertEqual(
+                org_rad_settings.get_field_value('is_first_name_required'), 'allowed'
+            )
+            self.assertEqual(
+                org_rad_settings.get_field_value('greeting_text'), 'Greeting text'
+            )
+            self.assertEqual(
+                org_rad_settings.get_field_value('password_reset_url'),
+                'http://localhost:8000/admin/password_change/',
+            )
+            self.assertEqual(
+                org_rad_settings.get_field_value('extra_config'), 'no data'
+            )
